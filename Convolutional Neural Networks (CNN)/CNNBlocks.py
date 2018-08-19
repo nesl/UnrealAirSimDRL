@@ -19,8 +19,8 @@ import numpy as np
 class VGGConvPoolBlock64():
     
     def __init__(self,  # Describes the filter sizes for the block
-                 pool_flags = [False, True], relus_flags = [False, True],
-                 batch_normalization_flags = [False, False],
+                 pool_flags = [False, True], relus_flags = [False, False],
+                 batch_normalization_flags = [False, True],
                  kern_sizes = [[3,3,3,64],[3,3,64,64]],
                  conv_strides = [[1,1,1,1],[1,1,1,1]],
                  isBiaseds = [True, True],
@@ -78,13 +78,27 @@ class VGGConvPoolBlock64():
         return np.sum(np.array(self.pool_flags, dtype = np.int))
 
 
-
+class VGGConvPoolBlock32(VGGConvPoolBlock64):
+    
+    def __init__(self, _pool_flags = [False, True], _relus_flags = [False, True],
+                 _batch_normalization_flags = [False, True],
+                 _kern_sizes = [[3,3,3,32],[3,3,32,32]],
+                 _conv_strides = [[1,1,1,1],[1,1,1,1]],
+                 _isBiaseds = [True, True],
+                 _conv_mode = ['SAME','SAME']):
+           VGGConvPoolBlock64.__init__(self, pool_flags = _pool_flags,
+                                       relus_flags = _relus_flags,
+                                       batch_normalization_flags = _batch_normalization_flags,
+                                       kern_sizes = _kern_sizes,
+                                       conv_strides = _conv_strides,
+                                       isBiaseds = _isBiaseds,
+                                       conv_mode = _conv_mode) # The returned feature map will be of the same size as the inputted feature map
 
 
 class VGGConvPoolBlock128(VGGConvPoolBlock64):
     
     def __init__(self, _pool_flags = [False, True], _relus_flags = [False, True],
-                 _batch_normalization_flags = [True, False],
+                 _batch_normalization_flags = [False, True],
                  _kern_sizes = [[3,3,3,128],[3,3,128,128]],
                  _conv_strides = [[1,1,1,1],[1,1,1,1]],
                  _isBiaseds = [True, True],
@@ -101,7 +115,7 @@ class VGGConvPoolBlock128(VGGConvPoolBlock64):
 class VGGConvPoolBlock256(VGGConvPoolBlock64):
     
     def __init__(self, _pool_flags = [False, False ,True], _relus_flags = [False, False, True],
-                 _batch_normalization_flags = [False, True, False],
+                 _batch_normalization_flags = [False, False, True],
                  _kern_sizes = [[3,3,3,256],[3,3,256,256],[3,3,256,256]],
                  _conv_strides = [[1,1,1,1],[1,1,1,1],[1,1,1,1]],
                  _isBiaseds = [True, True, True],

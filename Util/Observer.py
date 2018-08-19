@@ -37,5 +37,6 @@ class Publisher:
 
 
 
-
-
+a = Subscriber("Nat")
+b = Subscriber("John")
+c = Publisher()

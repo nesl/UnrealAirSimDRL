@@ -14,7 +14,6 @@ sys.path.append("D:\Desktop\Research\Machine_Learning\Anaconda\Spyder\Reinforcem
 import FullyConnectedLayer as FCL
 import CNNBlocks
 import time as time
-import copy
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -22,15 +21,14 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 class CDQN():
     def __init__(self, x_dim, n_outputs, hidden_layer_sizes, gamma,
-                 max_experiences = 20000, min_experiences = 100, 
-                 batch_sz= 32, IMG_TIME_STEP = 1, learning_rate = 1e-3):
+                 max_experiences = 10000, min_experiences = 100, 
+                 batch_sz= 32, learning_rate = 1e-3):
 
         #Parameters for tuning
         self.max_experiences = max_experiences
         self.min_experiences = min_experiences
         self.batch_sz = batch_sz
         self.gamma = gamma
-        self.IMG_STATE_STEP = IMG_TIME_STEP # Defines how many images are stacked into one state
         
         #Input and Output Layer dimentions
         self.x_dim = x_dim
@@ -52,6 +50,10 @@ class CDQN():
         self.CNN_params = [] # Storage of FC Param Variables for tensor copies
         
         # Stack Convolutional Blocks -- Most of VGG Model
+        ConvBlock = CNNBlocks.VGGConvPoolBlock32()
+        self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.VGGConvPoolBlock32()
+        self.CNN_Block_Layers.append(ConvBlock)
         ConvBlock = CNNBlocks.VGGConvPoolBlock64()
         self.CNN_Block_Layers.append(ConvBlock)
         ConvBlock = CNNBlocks.VGGConvPoolBlock64()
@@ -60,7 +62,6 @@ class CDQN():
         self.CNN_Block_Layers.append(ConvBlock)
         ConvBlock = CNNBlocks.VGGConvPoolBlock128()
         self.CNN_Block_Layers.append(ConvBlock)
-        
         # Determine Number of Stacked Convolutional Blocks
         self.num_conv_blocks = len(self.CNN_Block_Layers)
         
@@ -125,7 +126,7 @@ class CDQN():
         self.cost = tf.reduce_sum(tf.square(self.G - self.selected_action_values))
         self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(self.cost)
         #self.train_op = tf.train.GradientDescentOptimizer(1e-4).minimize(self.cost)
-        #self.train_op = tf.train.MomentumOptimizer(1e-3, momentum=0.9).minimize(self.cost)
+        #self.train_op = tf.train.MomentumOptimizer(learning_rate, momentum=0.9).minimize(self.cost)
         
         # Create replay memory
         self.experience = {'s': [], 'a': [], 'r': [], 's2': [], 'done': []}
@@ -139,7 +140,8 @@ class CDQN():
         self.session = session
     def restore_session(self, filedir):
         saver = tf.train.Saver()
-        saver.restore(self.session, tf.train.latest_checkpoint(filedir))
+        saver.restore(self.session, filedir + "\\model.ckpt")
+        print("Session Restored!")
     def save_session(self, filedir):
         saver = tf.train.Saver()
         save_path = saver.save(self.session, filedir + "//model.ckpt")
@@ -173,42 +175,49 @@ class CDQN():
 
     def predict(self, x):
         print("X_Predict Shape: ", x.shape)
-        X = np.float32(x)
-        return self.session.run(self.predict_op, feed_dict={self.X: X})
-
-    def train(self, target_network):
+        #X = np.float32(x)
+        tic = time.time()
+        pred = self.session.run(self.predict_op, feed_dict={self.X: x})
+        print("Prediction Time: ", time.time() - tic)
+        return pred
+        
+    def train(self, target_network, iterations = 1):
         # sample a random batch from buffer, do an iteration of GD
         if len(self.experience['s']) < self.min_experiences:
             # don't do anything if we don't have enough experience
             return None
+        loss = 0
+        
 
-        # randomly select a batch
-        idx = np.random.choice(len(self.experience['s']), size=self.batch_sz, replace=False) # returns a list of positional indexes
+        for i in range(iterations):
+            tic = time.time()
+            # randomly select a batch
+            idx = np.random.choice(len(self.experience['s']), size = self.batch_sz, replace=False) # returns a list of positional indexes
+            
+            states = np.array([self.experience['s'][i] for i in idx], np.float32)
+            next_states = np.array([self.experience['s2'][i] for i in idx], np.float32)
+            
+            states.reshape(self.batch_sz, self.x_dim[0], self.x_dim[1], self.x_dim[2])
+            next_states.reshape(self.batch_sz, self.x_dim[0], self.x_dim[1], self.x_dim[2]) #Deoesn't have self.x_dim[2]
         
-        states = np.array([self.experience['s'][i] for i in idx], np.float32)
-        next_states = np.array([self.experience['s2'][i] for i in idx], np.float32)
-        
-        states.reshape(self.batch_sz, self.x_dim[0], self.x_dim[1], self.x_dim[2])
-        next_states.reshape(self.batch_sz, self.x_dim[0], self.x_dim[1], self.x_dim[2]) #Deoesn't have self.x_dim[2]
+            actions = [self.experience['a'][i] for i in idx]
+            rewards = [self.experience['r'][i] for i in idx]
+            dones = [self.experience['done'][i] for i in idx]
+            
+            # With our SARS' fourple, based on our initial state, we will take the next state the action landed us in (s') and compute the maximum next state reward we can achieve
+            # It is very important that we call the predict function on the target_network
+            max_ns_rewards = np.max(target_network.predict(next_states), axis = 1)
+            #max_ns_reward = target_network.predict(next_states) # Currently we only have 1 output guess
+            
+            # Targets, aka the current hypothesized return from a state, is what we iteratively train on.
+            targets = [r + self.gamma*mnsr if not done else r for r, mnsr, done in zip(rewards, max_ns_rewards, dones)]
     
-        actions = [self.experience['a'][i] for i in idx]
-        rewards = [self.experience['r'][i] for i in idx]
-        dones = [self.experience['done'][i] for i in idx]
+            # Call the optimizer. Predict the loss from the current batch using the return as the target goal, with respect to THAT action the agent has chosen
+            #self.session.run(self.train_op,feed_dict= {self.X: states, self.G: targets})
+            loss, _ = self.session.run([self.cost, self.train_op], feed_dict= {self.X: states, self.G: targets, self.actions: actions})
+            
+            print("Stochastic Train Round: ", i, "Loss: ", loss, ", Time: ", time.time() - tic)
         
-        print("Train State Shape: ", states.shape, "Train NStates Shape: ", next_states.shape)
-        print("Train State Shape: ", states.dtype, "Train NStates Shape: ", next_states.dtype)
-        
-        # With our SARS' fourple, based on our initial state, we will take the next state the action landed us in (s') and compute the maximum next state reward we can achieve
-        # It is very important that we call the predict function on the target_network
-        max_ns_rewards = np.max(target_network.predict(next_states), axis = 1)
-        #max_ns_reward = target_network.predict(next_states) # Currently we only have 1 output guess
-        
-        # Targets, aka the current hypothesized return from a state, is what we iteratively train on.
-        targets = [r + self.gamma*mnsr if not done else r for r, mnsr, done in zip(rewards, max_ns_rewards, dones)]
-
-        # Call the optimizer. Predict the loss from the current batch using the return as the target goal, with respect to THAT action the agent has chosen
-        #self.session.run(self.train_op,feed_dict= {self.X: states, self.G: targets})
-        loss, _ = self.session.run([self.cost, self.train_op], feed_dict= {self.X: states, self.G: targets, self.actions: actions})
         return loss
         
     # This function will run each and every time we take a step inside our model.
@@ -235,10 +244,10 @@ class CDQN():
             return np.random.choice(self.n_outputs) # Choose a random action 0,1
         else:
             tic = time.time()
-            X = x.reshape(1,x[0], x[1], x[2])
+            X = x.reshape(1,x.shape[0],x.shape[1],x.shape[2])
             act_arg = np.argmax(self.predict(X))
             toc = time.time()
-            print("Prediction Time:  ", toc - tic)
+            print("Prediction: ", act_arg, "Time: ", toc - tic)
             return act_arg # returns the argument number of the highest return found from the Q-Net
             #return self.predict(x) # returns the argyment number of highest return
     

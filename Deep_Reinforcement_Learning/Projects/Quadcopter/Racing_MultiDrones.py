@@ -20,8 +20,9 @@ import multiprocessing as mp
 
 # Import Reinforcement learning Library
 sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Library")
-from UnrealAirSimEnvironments import CarUnrealEnvironment
-from CDQN import CDQN
+from UnrealAirSimEnvironments import MultiQuadcoptersUnrealEnvironment
+from MultiCDQN import MasterCDQN
+import CDQN
 import AirSimGUI
 
 # Import Local Helper Utils
@@ -37,24 +38,23 @@ IMG_CHANNELS = 1 # Gray or RGB or Depth (4-D)
 IMG_STEP = 3
 IMG_VIEWS = 3 # Front Left, Front Center, Front Right
 
-# Train the car to self drive -- SKEERTTTT!!!!!!!!!
-def train_racing_car(primaryNetwork, targetNetwork, 
+# Train the drone to self fly -- SKEERTTTT!!!!!!!!!
+def train_racing_drones(_vehicle_names, primaryNetwork, targetNetwork, 
                      env, directory, 
                      NUM_EPISODES = 1000, EPISODE_ITERATIONS_MAX = 100,
-                     COPY_PERIOD = 50, EPSILON = 1):
+                     COPY_PERIOD = 200, EPSILON = 1):
     
     # Set up GUI Video Feeder
-    vehicle_names = ["Car1"]
+    vehicle_names = _vehicle_names
     parentImgConn, childImgConn = mp.Pipe()
     parentStateConn, childStateConn = mp.Pipe()
-    app = AirSimGUI.CarGUI(parentStateConn, parentImgConn, vehicle_names = vehicle_names,
+    app = AirSimGUI.QuadcopterGUI(parentStateConn, parentImgConn, vehicle_names = vehicle_names,
                                                num_video_feeds = IMG_VIEWS*IMG_STEP, isRGB = False)
     
     COPY_MODEL_FLAG = False
     copy_model_iterator = 0
     for episode in range(NUM_EPISODES):
         print('Reset racing!', "Episode: ", episode)
-        env.client.simPause(True)
         
         # Decay Epsilon to Greedy-Like
         ep = EPSILON / np.sqrt(episode + 1)
@@ -64,6 +64,15 @@ def train_racing_car(primaryNetwork, targetNetwork,
         # Episode iterator, copy model iterator and flag signaling to copy parameters or restart episode
         episode_iterator = 0
         DONE_FLAG = False
+    
+        # Copy model if we have reached copy_period rounds.
+        if COPY_MODEL_FLAG:
+            print('Copying model')
+            targetNetwork.copy_from(primaryNetwork)
+            copy_model_iterator = 0
+            COPY_MODEL_FLAG = False
+            print('Copying model complete!')
+            time.sleep(1)
         
         # Train the model more now between rounds so delay is less
         #primaryNetwork.train(targetNetwork, 20) # num times
@@ -74,24 +83,13 @@ def train_racing_car(primaryNetwork, targetNetwork,
         
         
         # Reset s*tates for the next training round
-        obs4 = np.zeros((IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS * IMG_STEP * IMG_VIEWS))
+        obs4s = dict.fromkeys(vehicle_names, np.zeros((IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS * IMG_STEP * IMG_VIEWS)))
         
-        env.client.simPause(False)
         # Returns inertial state vector, the image observation, and meta data (Time ellapsed)
-        car_state, obs, meta =  env.reset()
-        
-        env.client.simPause(True)
-         # Copy model if we have reached copy_period rounds.
-        if COPY_MODEL_FLAG:
-            print('Copying model')
-            targetNetwork.copy_from(primaryNetwork)
-            copy_model_iterator = 0
-            COPY_MODEL_FLAG = False
-            print('Copying model complete!')
-        env.client.simPause(False)
-        
+        car_states, obss, metas =  env.reset()
         #print(obs.shape, obs4.shape)
-        obs4 = trim_append_state_vector(obs4, obs, pop_index = IMG_VIEWS * IMG_CHANNELS)
+        for vn in vehicle_names:
+            obs4s[vn] = trim_append_state_vector(obs4s[vn], obss[vn], pop_index = IMG_VIEWS * IMG_CHANNELS)
         
         # Return and Loss
         episode_return = 0
@@ -101,26 +99,28 @@ def train_racing_car(primaryNetwork, targetNetwork,
             episode_iterator += 1
             tic = time.time()
             
-            # Sample action 
-            action = primaryNetwork.sample_action(obs4, ep)
+            # Sample quad actions
+            actions = primaryNetwork.sample_actions(obs4s, ep)
             
-            # Update Stacked State
-            prev_obs4 = obs4
-            if episode_iterator < 10:
-                state, obs, reward, DONE_FLAG, meta = env.step(env.action_num("Throttle Up")) # new single observation
+            # Update Stacked States
+            prev_obs4s = obs4s
+            if episode_iterator < 8:
+                states, obss, rewards, DONE_FLAGs, metas = env.steps(dict.fromkeys(vehicle_names, env.action_name("Vz"))) # new single observation
             else:
-                state, obs, reward, DONE_FLAG, meta = env.step(action) # new single observation
+                states, obss, rewards, DONE_FLAGs, metas = env.steps(actions) # new single observation
             
             # Pause Sim
             env.client.simPause(True)
             
-            # Reduce dimentionality of obs
-            obs4 = trim_append_state_vector(obs4, obs, pop_index = IMG_VIEWS * IMG_CHANNELS) # pop old and append new state obsv
-            # Add new reward to running episode return
-            episode_return += reward
+            # Stack New Obsvs
+            for vn in vehicle_names:
+                obs4s[vn] = trim_append_state_vector(obs4s[vn], obss[vn], pop_index = IMG_VIEWS * IMG_CHANNELS) # pop old and append new state obsv
+                
+            # Add new rewards to running episode return
+            episode_return += np.sum(np.array([rewards[vn] for vn in vehicle_names]))
             
             # Save new experience and train
-            primaryNetwork.add_experience(prev_obs4, action, reward, obs4, DONE_FLAG)
+            primaryNetwork.add_experiences(prev_obs4s, actions, rewards, obs4s, DONE_FLAGs)
             loss = primaryNetwork.train(targetNetwork) # train by using the training model
             
             # Append Loss
@@ -136,43 +136,54 @@ def train_racing_car(primaryNetwork, targetNetwork,
             
             # Send off to the GUI Process!
             tic2 = time.time()
-            d1 = dict.fromkeys(vehicle_names, np.array(obs4 * 255, dtype = np.uint8))
-            d2 = dict.fromkeys(vehicle_names, state)
-            childImgConn.send(d1) # Make it a image format (unsigned integers)
-            childStateConn.send(d2)
+            gui_obs = dict.fromkeys(vehicle_names)
+            for vn in vehicle_names:
+                gui_obs[vn] = np.array(obs4s[vn]*255,dtype = np.uint8)
+            childImgConn.send(gui_obs) # Make it a image format (unsigned integers)
+            childStateConn.send(states)
             print("GUI Process Update Time: ", time.time() - tic2)
             
             # Print Output
-            #print(state)
+            print(state)
+            #print(rewards,actions,DONE_FLAGs)
             print("Episode: ", episode, ", Iteration: ", 
-                  episode_iterator, ", Reward: ", reward,
-                  ", Loss: ", loss, ", Action: ", env.action_name(action), ", Ellasped Time: ", time.time() - tic)
-            env.client.simPause(False)
+                  episode_iterator, ", Rewards: ", rewards[vehicle_names[0]],
+                  ", Loss: ", loss, ", Action Dron 0: ", actions[vehicle_names[0]], ", Ellasped Time: ", time.time() - tic)
+            env.client.simPause(False) # Play
             
             # Add Excel and GUI Listeners to Loop
         print("Total Episode Return: ", episode_return, ", Total Episode Loss: ", episode_loss)
         
 def main():
-    
+    # Define Vehicles: Should be same as your json
+    vehicle_names = ["Drone1", "Drone2"]
     # Environment returns us the states, rewards, and communicates with the Unreal Simulator
-    UREnv = CarUnrealEnvironment(image_mask_FC_FR_FL = [True, True, True], mode = "both_gray_normal") # Returns both the image obs and the inertial state
+    UREnv = MultiQuadcoptersUnrealEnvironment(vehicle_names, 
+                                              image_mask_FC_FR_FL = [True, True, True], 
+                                              mode = "both_gray_normal") # Returns both the env image obs and vehicle state depending on mode
     
     #data_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Projects\\Car\\Data"
-    model_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Network_Models\\Car\\model_racing_car"
+    model_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Projects\\Quadcopter\\Models2"
     
     xdims = (IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS * IMG_VIEWS * IMG_STEP)
-    n_outputs = 7 # Drive Commands -- See car drive env
+    n_outputs = 14 # Quad Commands -- See quad drive env
     hidden_layer_sizes = [800,400]
     gamma = .99
     learning_rate = 1e-2
     trainig_batch_size = 32
+    Max_Experiences = 8000
+    Min_Experiences = 200
     
     # Initialize the primary and target networks
-    primaryNetwork = CDQN(xdims, n_outputs, hidden_layer_sizes, 
-                 gamma, learning_rate = learning_rate, batch_sz = trainig_batch_size )
+    primaryNetwork = MasterCDQN(vehicle_names, xdims, n_outputs, 
+                                hidden_layer_sizes, gamma,
+                                max_experiences = Max_Experiences,
+                                min_experiences = Min_Experiences,
+                                batch_size = trainig_batch_size, 
+                                learning_rate = learning_rate)
     
-    targetNetwork = CDQN(xdims, n_outputs, hidden_layer_sizes, 
-                  gamma, learning_rate = learning_rate, batch_sz = trainig_batch_size)
+    targetNetwork = CDQN.CDQN(xdims, n_outputs, hidden_layer_sizes, 
+                  gamma, batch_sz = trainig_batch_size, learning_rate = learning_rate)
     
     # Instantiate Tensorflow Session
     config = tf.ConfigProto()
@@ -189,7 +200,7 @@ def main():
     
     # Train the Vehicle
     print('Network Ready!')
-    train_racing_car(primaryNetwork, targetNetwork, UREnv, directory = model_dir)
+    train_racing_drones(vehicle_names, primaryNetwork, targetNetwork, UREnv, directory = model_dir)
     
     # Save the Session to the model directory
     print("Saving Session")
