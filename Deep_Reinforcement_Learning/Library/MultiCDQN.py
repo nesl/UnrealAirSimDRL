@@ -102,7 +102,7 @@ class MasterCDQN:
     # Copy the model to the copy model, which is used to run predictions on
     def copy_from(self, other):
         self.CDQN.copy_from(other)
-    
+        
     # Pass in a list of inputs
     # Inputs should be a dictionary with each x in the corresponding vehicle bucket
     def predicts(self, Xs):

@@ -63,16 +63,18 @@ def train_racing_drones(_vehicle_names, primaryNetwork, targetNetwork,
         
         # Episode iterator, copy model iterator and flag signaling to copy parameters or restart episode
         episode_iterator = 0
-        DONE_FLAG = False
-    
+        DONE_FLAGs = dict.fromkeys(vehicle_names,False)
+        
+        env.client.simPause(True)
         # Copy model if we have reached copy_period rounds.
         if COPY_MODEL_FLAG:
             print('Copying model')
-            targetNetwork.copy_from(primaryNetwork)
+            targetNetwork.copy_from(primaryNetwork.CDQN)
             copy_model_iterator = 0
             COPY_MODEL_FLAG = False
             print('Copying model complete!')
             time.sleep(1)
+        env.client.simPause(False)
         
         # Train the model more now between rounds so delay is less
         #primaryNetwork.train(targetNetwork, 20) # num times
@@ -86,7 +88,7 @@ def train_racing_drones(_vehicle_names, primaryNetwork, targetNetwork,
         obs4s = dict.fromkeys(vehicle_names, np.zeros((IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS * IMG_STEP * IMG_VIEWS)))
         
         # Returns inertial state vector, the image observation, and meta data (Time ellapsed)
-        car_states, obss, metas =  env.reset()
+        states, obss, metas = env.reset()
         #print(obs.shape, obs4.shape)
         for vn in vehicle_names:
             obs4s[vn] = trim_append_state_vector(obs4s[vn], obss[vn], pop_index = IMG_VIEWS * IMG_CHANNELS)
@@ -94,8 +96,8 @@ def train_racing_drones(_vehicle_names, primaryNetwork, targetNetwork,
         # Return and Loss
         episode_return = 0
         episode_loss = 0
-        
-        while not DONE_FLAG and episode_iterator < EPISODE_ITERATIONS_MAX:
+
+        while not np.sum(np.array(list(DONE_FLAGs.values()), dtype = np.int)) and episode_iterator < EPISODE_ITERATIONS_MAX:
             episode_iterator += 1
             tic = time.time()
             
@@ -104,10 +106,7 @@ def train_racing_drones(_vehicle_names, primaryNetwork, targetNetwork,
             
             # Update Stacked States
             prev_obs4s = obs4s
-            if episode_iterator < 8:
-                states, obss, rewards, DONE_FLAGs, metas = env.steps(dict.fromkeys(vehicle_names, env.action_name("Vz"))) # new single observation
-            else:
-                states, obss, rewards, DONE_FLAGs, metas = env.steps(actions) # new single observation
+            states, obss, rewards, DONE_FLAGs, metas = env.steps(actions) # new single observation
             
             # Pause Sim
             env.client.simPause(True)
@@ -115,7 +114,7 @@ def train_racing_drones(_vehicle_names, primaryNetwork, targetNetwork,
             # Stack New Obsvs
             for vn in vehicle_names:
                 obs4s[vn] = trim_append_state_vector(obs4s[vn], obss[vn], pop_index = IMG_VIEWS * IMG_CHANNELS) # pop old and append new state obsv
-                
+            
             # Add new rewards to running episode return
             episode_return += np.sum(np.array([rewards[vn] for vn in vehicle_names]))
             
@@ -133,7 +132,7 @@ def train_racing_drones(_vehicle_names, primaryNetwork, targetNetwork,
             # Signal a copy to the training model if we reach copy_period timesteps
             if copy_model_iterator % COPY_PERIOD == 0:
                 COPY_MODEL_FLAG = True
-            
+
             # Send off to the GUI Process!
             tic2 = time.time()
             gui_obs = dict.fromkeys(vehicle_names)
@@ -144,7 +143,6 @@ def train_racing_drones(_vehicle_names, primaryNetwork, targetNetwork,
             print("GUI Process Update Time: ", time.time() - tic2)
             
             # Print Output
-            print(state)
             #print(rewards,actions,DONE_FLAGs)
             print("Episode: ", episode, ", Iteration: ", 
                   episode_iterator, ", Rewards: ", rewards[vehicle_names[0]],
@@ -157,10 +155,14 @@ def train_racing_drones(_vehicle_names, primaryNetwork, targetNetwork,
 def main():
     # Define Vehicles: Should be same as your json
     vehicle_names = ["Drone1", "Drone2"]
+    min_altitude = .25
+    max_altitude = 20
     # Environment returns us the states, rewards, and communicates with the Unreal Simulator
     UREnv = MultiQuadcoptersUnrealEnvironment(vehicle_names, 
                                               image_mask_FC_FR_FL = [True, True, True], 
-                                              mode = "both_gray_normal") # Returns both the env image obs and vehicle state depending on mode
+                                              mode = "both_gray_normal", 
+                                              max_altitude = max_altitude,
+                                              min_altitude = min_altitude) # Returns both the env image obs and vehicle state depending on mode
     
     #data_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Projects\\Car\\Data"
     model_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Projects\\Quadcopter\\Models2"

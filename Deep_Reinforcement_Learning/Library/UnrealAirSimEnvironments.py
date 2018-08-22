@@ -25,7 +25,7 @@ def drone_forest_racer_rewarding_function(collision_info, current_inertial_state
     
     # 2. Check for limits:
     # If we are above our z threshold, throw done flag
-    if current_inertial_state[0] > max_altitude or current_inertial_state[0] < min_altitude:
+    if current_inertial_state[2] > max_altitude or current_inertial_state[2] < min_altitude:
         done = True
         reward = -50
         print('Out of Bounds, Resetting Episode!')
@@ -42,9 +42,8 @@ def drone_forest_racer_rewarding_function(collision_info, current_inertial_state
     else:
         # Max is 1 if we are at mean height
         reward_height = -(current_inertial_state[2] - mean_height)**2 + 1
-        reward_speed = np.tanh(.1*(np.sqrt(current_inertial_state[3]**2 + current_inertial_state[4]**2) - 5)) + .5*np.log10(current_inertial_state[3]**2 + .001) + .5*np.log10(current_inertial_state[4]**2 + .001)
+        reward_speed = np.tanh(.1*(np.sqrt(current_inertial_state[3]**2 + current_inertial_state[4]**2 + current_inertial_state[5]**2) - 5)) + .5*np.log10(current_inertial_state[3]**2 + .001) + .5*np.log10(current_inertial_state[4]**2 + .001)
         reward = reward_height + reward_speed 
-        print("Reward Height: ", reward_height, " ,Reward_Speed: ", reward_speed)
         done = False
         return reward, done
     
@@ -347,12 +346,12 @@ class QuadcopterUnrealEnvironment:
         self.dt = self.toc - self.tic
         
         # Store the current state
-        self.current_inertial_state = np.array([pos[0] - #self.initial_position[0], 
-                                                pos[1] - #self.initial_position[1],
-                                                pos[2] - #self.initial_position[2],
-                                                vel[0], #- self.initial_velocity[0],
-                                                vel[1], #- self.initial_velocity[1],
-                                                vel[2], #- self.initial_velocity[2],
+        self.current_inertial_state = np.array([pos[0], 
+                                                pos[1], 
+                                                pos[2],
+                                                vel[0],
+                                                vel[1],
+                                                vel[2],
                                                 acc[0], acc[1], acc[2],
                                                 orien[0], orien[1], orien[2],
                                                 angVel[0], angVel[1], angVel[2],
@@ -991,7 +990,7 @@ class MultiQuadcoptersUnrealEnvironment:
     # setpoint is where we would like the drone to stabilize around
     # minimax_z_thresh should be positive and describe max and min allowable z-coordinates the drone can be in
     # max drift is how far in x and y the drone can drift from the setpoint in x and y without episode ending (done flag will be thrown)
-    def __init__(self, vehicle_names, max_altitude = 14,
+    def __init__(self, vehicle_names, max_altitude = 18,
                  min_altitude = 2,
                  image_mask_FC_FR_FL = [True, False, False], # Front Center, Front right, front left
                  reward_function = drone_forest_racer_rewarding_function,
@@ -1169,7 +1168,7 @@ class MultiQuadcoptersUnrealEnvironment:
         num_imgs = np.sum(np.array(self.image_mask_FC_FR_FL, dtype = np.int))
         for vn in self.vehicle_names:
             for i in range(num_imgs):
-                grays.append(self.rgb2gray(self.images_rgb[vn][:,:,self.image_mask_rgb[3*i:3*(i+1)]] / 255, isGray3D = True))
+                grays.append(np.array(self.rgb2gray(self.images_rgb[vn][:,:,self.image_mask_rgb[3*i:3*(i+1)]], isGray3D = True), dtype = np.float32) / 255)
             graycube = grays[0]
             for i in range(num_imgs - 1):
                 graycube = np.dstack((graycube, grays[i+1]))
@@ -1244,9 +1243,10 @@ class MultiQuadcoptersUnrealEnvironment:
         # Get Base Inertial States
         for vn in self.vehicle_names:
             state = self.client.simGetGroundTruthKinematics(vehicle_name = vn)
-            pos = (state['position']['x_val'],state['position']['y_val'],state['position']['z_val'])
+            pos = (state['position']['x_val'],state['position']['y_val'],-1*state['position']['z_val'])
             vel = (state['linear_velocity']['x_val'],state['linear_velocity']['y_val'], -1*state['linear_velocity']['z_val'])
             acc = (state['linear_acceleration']['x_val'],state['linear_acceleration']['y_val'],state['linear_acceleration']['z_val'])
+            orien = (state['orientation']['x_val'],state['orientation']['y_val'],state['orientation']['z_val'])
             angVel = (state['angular_velocity']['x_val'],state['angular_velocity']['y_val'],state['angular_velocity']['z_val'])
             angAcc = (state['angular_acceleration']['x_val'],state['angular_acceleration']['y_val'],state['angular_acceleration']['z_val'])
             
@@ -1255,13 +1255,14 @@ class MultiQuadcoptersUnrealEnvironment:
             self.dt = self.toc - self.tic
             
             # Store the current state
-            self.current_inertial_states[vn] = np.array([pos[0] - #self.initial_position[0], 
-                                                    pos[1] - #self.initial_position[1],
-                                                    pos[2] - #self.initial_position[2],
-                                                    vel[0], #- self.initial_velocity[0],
-                                                    vel[1], #- self.initial_velocity[1],
-                                                    vel[2], #- self.initial_velocity[2],
+            self.current_inertial_states[vn] = np.array([pos[0],
+                                                    pos[1],
+                                                    pos[2],
+                                                    vel[0],
+                                                    vel[1],
+                                                    vel[2],
                                                     acc[0], acc[1], acc[2],
+                                                    orien[0], orien[1], orien[2], 
                                                     angVel[0], angVel[1], angVel[2],
                                                     angAcc[0], angAcc[1], angAcc[2]])
             # Load new images into env from sim

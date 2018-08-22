@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Aug  5 13:54:53 2018
+
+@author: natsn
+"""
+
 import pandas as pd
 import numpy as np
 import WebScraper as WS

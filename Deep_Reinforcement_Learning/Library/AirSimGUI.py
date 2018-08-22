@@ -5,12 +5,6 @@ Created on Sat Aug 18 10:55:37 2018
 @author: natsn
 """
 
-# -*- coding: utf-8 -*-
-"""
-Spyder Editor
-This is a temporary script file.
-"""
-
 import tkinter as tk
 from tkinter.ttk import Label, Frame, Entry, Notebook, Combobox
 import threading 
@@ -188,7 +182,6 @@ class QuadcopterGUI(multiprocessing.Process):
             print("Updating GUI Image Feed")
             for i in range(self.num_video_feeds):
                 sim_image = sim_images[:,:,scalar*i:scalar*(i+1)]
-                
                 if scalar == 1:
                     sim_image = np.reshape(sim_image, (sim_image.shape[0], sim_image.shape[1]))
                 if ((i % 3) == 0):
@@ -212,8 +205,10 @@ class QuadcopterGUI(multiprocessing.Process):
     def update_inertial_states(self):
         while True:
             current_inertial_states = self.statePipe.recv()
+            print(current_inertial_states)
             current_inertial_state = current_inertial_states[self.current_vehicle_feed.get()]
             print('State Update Event Triggered!')
+            print(current_inertial_states, current_inertial_state)
             self.entry_posx.delete(0,tk.END)
             self.entry_posx.insert(0, str(current_inertial_state[0]))
             self.entry_posy.delete(0,tk.END)
