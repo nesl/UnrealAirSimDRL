@@ -62,6 +62,7 @@ class QuadcopterGUI(multiprocessing.Process):
         self.canvas = FigureCanvasTkAgg(self.fig, self.PlottingFrame)
         self.canvas.get_tk_widget().grid(row = 1, column = 0)
         
+        
         # For Switch Vehicle Feeds
         self.current_vehicle_feed = tk.StringVar(self.StateFrame) # Linked to current vehicle choice
         self.switch_vehicle_feed = Combobox(self.StateFrame, textvariable = self.current_vehicle_feed)

@@ -5,11 +5,11 @@ Created on Mon Aug  6 00:40:45 2018
 @author: natsn
 """
 
-from pynput.keyboard import Key, Listener
+from pynput.keyboard import Key, Listener, KeyCode
 import time
 import queue
-# Define Callback Functions
 
+# Define Callback Functions
 def on_press(key):
     print("Pressed Key: ", key)
 
@@ -69,7 +69,13 @@ class KeyboardListener(Listener):
         self.start()
         
     def on_press(self, key):
-        self.last_key = {'key': key, 'Time': time.time() - self.start_time, 'isPressed': True, "Name":self.name}
+        if key == self.exit_key:
+            print("Ending Keyboard Listener " + self.name)
+            self.join()
+        if hasattr(key, 'char'):
+            self.last_key = {'key': key, 'key_val': key.char, 'Time': time.time() - self.start_time, 'isPressed': True, "Name":self.name}
+        else:
+            self.last_key = {'key': key, 'key_val': None, 'Time': time.time() - self.start_time, 'isPressed': True, "Name":self.name}
         self.keyQueue.put(self.last_key)
         if self.isPrintOnPress:
             print("Pressed Key: ", key)
@@ -79,11 +85,19 @@ class KeyboardListener(Listener):
         if key == self.exit_key:
             print("Ending Keyboard Listener " + self.name)
             self.join()
-        self.last_key = {'key': key, 'Time': time.time() - self.start_time, 'isPressed': False, "Name":self.name}
+        if hasattr(key, 'char'):
+            self.last_key = {'key': key, 'key_val': key.char, 'Time': time.time() - self.start_time, 'isPressed': True, "Name":self.name}
+        else:
+            self.last_key = {'key': key, 'key_val': None, 'Time': time.time() - self.start_time, 'isPressed': True, "Name":self.name}
         self.keyQueue.put(self.last_key)
         if self.isPrintOnPress:
             print("Released Key: ", key)
     def get_last_key(self):
+        if not self.is_alive():
+            print("Listener Process Stopped, Rebooting")
+            self.join()
+            print("Go Listen!")
+            self.start()
         return self.keyQueue.get()
 
 
@@ -96,8 +110,6 @@ class KeyboardListener(Listener):
 #        print("Last Key: ", kbl1.get_last_key())
 #        print("Last Key: ", kbl2.get_last_key())
 #        time.sleep(1)
-# 
-#    
     
     
     
