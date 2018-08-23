@@ -12,7 +12,7 @@ import multiprocessing
 import time
 import numpy as np
 import sys
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util")
+sys.path.append("../../Util")
 import ExcelLoader as XL
 import matplotlib
 matplotlib.use("TkAgg")

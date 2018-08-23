@@ -12,16 +12,20 @@ Modified to add deadzones, reduce noise, and support vibration
 Only req is Pyglet 1.2alpha1 or higher:
 pip install --upgrade http://pyglet.googlecode.com/archive/tip.zip 
 """
+# export PYTHONPATH="$PYTHONPATH:/home/nesl-awesome-renju/venvTF/lib/python3.
+# 5/site-packages/IPython/terminal/pt_inputhooks/"
 
 import ctypes
 import os
 import sys
+sys.path.append("/home/nesl-awesome-renju/venvTF/lib/python3.5/site-packages/IPython/terminal/pt_inputhooks/")
 import time
 from operator import itemgetter, attrgetter
 from itertools import count, starmap
-from pyglet import event
+#from pyglet import event
+from pyglet import *
 import xlwt
-import multiprocessing
+#import multiprocessing
 import threading
 import queue
 
@@ -83,8 +87,9 @@ class XINPUT_BATTERY_INFORMATION(ctypes.Structure):
     _fields_ = [("BatteryType", ctypes.c_ubyte),
                 ("BatteryLevel", ctypes.c_ubyte)]
 
-xinput = ctypes.windll.xinput1_4
-#xinput = ctypes.windll.xinput9_1_0  # this is the Win 8 version ?
+xinput = ctypes.cdll.xinput1_4
+    
+#xinput = ctypes.cdll.xinput9_1_0  # this is the Win 8 version ?
 # xinput1_2, xinput1_1 (32-bit Vista SP1)
 # xinput1_3 (64-bit Vista SP1)
 

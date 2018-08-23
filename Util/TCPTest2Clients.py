@@ -10,7 +10,7 @@ import time
 
 # Connects and disconnects depending on time
 if __name__ == "__main__":
-    client = TCPClient.TCPClient(buff_size = 1024)
+    client = TCPClient.TCPClient(buff_size = 1024, port = 37479)
     data = None
     start_time = time.time()
     locked = False

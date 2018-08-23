@@ -19,13 +19,13 @@ import multiprocessing as mp
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disables debugging log
 
 # Import Reinforcement learning Library
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Library")
+sys.path.append("../../Deep_Reinforcement_Learning/Library")
 from UnrealAirSimEnvironments import CarUnrealEnvironment
 from CDQN import CDQN
 import AirSimGUI
 
 # Import Local Helper Utils
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Util")
+sys.path.append("../../Util")
 from ImageProcessing import trim_append_state_vector, fill_state_vector
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
