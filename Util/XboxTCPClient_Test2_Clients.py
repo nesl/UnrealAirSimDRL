@@ -11,7 +11,7 @@ import time
 import XboxControllerTCPClient
 import KeyboardListener
 
-path = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util\\XboxClient2.csv"
+path = os.path.dirname(os.path.abspath(__file__)) + "\\XboxClient2.csv"
 xbc = XboxControllerTCPClient.XboxControllerTCPClient(write_to_path = path)
 kbl = KeyboardListener.KeyboardListener(on_release = False, isPrintOnPress = True)
 while True:

@@ -5,8 +5,8 @@ Created on Wed Aug  1 01:40:56 2018
 @author: natsn
 """
 
-import sys
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util")
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\Util")
 import tensorflow as tf
 
 

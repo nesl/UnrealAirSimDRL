@@ -11,15 +11,16 @@ import WebScraper as WS
 import urllib
 import bs4
 import pickle
+import os
 
-fer_2013_filepath = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\DataSets\\fer2013\\fer2013.csv"
-CAAD_filepath = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\DataSets\\CAAD\\dev_dataset.csv"
-CAAD_data_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\DataSets\\CAAD\\images\\"
-ImageNet_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\DataSets\\imagenet_fall11_urls\\"
-Mnist_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\DataSets\\mnist\\mnist_train.csv"
+fer_2013_filepath = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\fer2013\\fer2013.csv"
+CAAD_filepath = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\CAAD\\dev_dataset.csv"
+CAAD_data_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\CAAD\\images\\"
+ImageNet_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\\\DataSets\\imagenet_fall11_urls\\"
+Mnist_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\mnist\\mnist_train.csv"
 Website = "https://www.uwaterloo.ca"
-cifar10_dir = "D:\\Desktop\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\DataSets\\cifar10"
-cifar100_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\DataSets\\cifar100"
+cifar10_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\cifar10"
+cifar100_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\cifar100"
 
 
 # Returns the 36000+ Images of the Fer2013 Facial Recognition Dataset (10 Classes of facial expressions)

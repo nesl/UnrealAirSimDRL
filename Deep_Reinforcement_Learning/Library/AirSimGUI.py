@@ -11,8 +11,8 @@ import threading
 import multiprocessing
 import time
 import numpy as np
-import sys
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util")
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Util")
 import ExcelLoader as XL
 import matplotlib
 matplotlib.use("TkAgg")

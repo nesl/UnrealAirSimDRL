@@ -10,6 +10,7 @@ import xlsxwriter
 import pandas as pd
 from openpyxl import load_workbook
 import openpyxl
+import os
 
 # Idea is to have all data processed into the dictionary, and then have the excel writer either
 # write to csv, xlsx, append to, etc.
@@ -96,8 +97,8 @@ class FileWriter:
 
 # Design Custom Pandas Excel Reader
 data = {"does":[[0,0],0],"this":[1,1],"work":[2,2]}
-csv_path = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util\\test1.csv"
-xlsx_path = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util\\test2.xlsx"
+csv_path = os.path.dirname(os.path.abspath(__file__)) + "\\test1.csv"
+xlsx_path = os.path.dirname(os.path.abspath(__file__)) + "\\test2.xlsx"
 
 
 xl = FileWriter(csv_path)

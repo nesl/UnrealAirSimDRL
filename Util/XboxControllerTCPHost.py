@@ -65,7 +65,7 @@ class XboxControllerTCPHost(TCPHost.TCPHost):
 
 
 if __name__ == "__main__":
-    path = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util\\XboxHost.csv"
+    path = os.path.dirname(os.path.abspath(__file__)) + "\\XboxHost.csv"
     xbh = XboxControllerTCPHost(write_to_path = path)
     while True:
         xbh.send_controller_update()
