@@ -15,40 +15,21 @@ import numpy as np
 import tensorflow as tf
 import sys
 import time
-import multiprocessing as mp
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # Disables debugging log
+
 
 # Import Reinforcement learning Library
 sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Library")
-from UnrealAirSimEnvironments import CarUnrealEnvironment
 from CDQN import CDQN
-import AirSimGUI
-
-# Import Local Helper Utils
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Util")
-from ImageProcessing import trim_append_state_vector, fill_state_vector
+sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Library\\ClientAirSimEnvironments")
+from AutoCarUnrealEnvironment import AutoCarUnrealEnvironment
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-
-# Some Globals for dimensioning and blocking
-IMG_HEIGHT = 128
-IMG_WIDTH = 128
-IMG_CHANNELS = 1 # Gray or RGB or Depth (4-D)
-IMG_STEP = 3
-IMG_VIEWS = 3 # Front Left, Front Center, Front Right
 
 # Train the car to self drive -- SKEERTTTT!!!!!!!!!
 def train_racing_car(primaryNetwork, targetNetwork, 
                      env, directory, 
-                     NUM_EPISODES = 1000, EPISODE_ITERATIONS_MAX = 100,
+                     NUM_EPISODES = 1000, EPISODE_ITERATIONS_MAX = 200,
                      COPY_PERIOD = 50, EPSILON = 1):
-    
-    # Set up GUI Video Feeder
-    vehicle_names = ["Car1"]
-    parentImgConn, childImgConn = mp.Pipe()
-    parentStateConn, childStateConn = mp.Pipe()
-    app = AirSimGUI.CarGUI(parentStateConn, parentImgConn, vehicle_names = vehicle_names,
-                                               num_video_feeds = IMG_VIEWS*IMG_STEP, isRGB = False)
     
     COPY_MODEL_FLAG = False
     copy_model_iterator = 0
@@ -72,26 +53,18 @@ def train_racing_car(primaryNetwork, targetNetwork,
         if (episode + 1) % 10 == 0:
             primaryNetwork.save_session(directory)
         
-        
-        # Reset s*tates for the next training round
-        obs4 = np.zeros((IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS * IMG_STEP * IMG_VIEWS))
-        
-        env.client.simPause(False)
         # Returns inertial state vector, the image observation, and meta data (Time ellapsed)
-        car_state, obs, meta =  env.reset()
+        state, obs4, meta =  env.reset()
         
-        env.client.simPause(True)
          # Copy model if we have reached copy_period rounds.
         if COPY_MODEL_FLAG:
+            env.client.simPause(True)
             print('Copying model')
             targetNetwork.copy_from(primaryNetwork)
             copy_model_iterator = 0
             COPY_MODEL_FLAG = False
             print('Copying model complete!')
-        env.client.simPause(False)
-        
-        #print(obs.shape, obs4.shape)
-        obs4 = trim_append_state_vector(obs4, obs, pop_index = IMG_VIEWS * IMG_CHANNELS)
+            env.client.simPause(False)
         
         # Return and Loss
         episode_return = 0
@@ -102,20 +75,16 @@ def train_racing_car(primaryNetwork, targetNetwork,
             tic = time.time()
             
             # Sample action 
-            action = primaryNetwork.sample_action(obs4, ep)
-            
+            action = primaryNetwork.sample_action(obs4, ep)            
             # Update Stacked State
             prev_obs4 = obs4
-            if episode_iterator < 10:
-                state, obs, reward, DONE_FLAG, meta = env.step(env.action_num("Throttle Up")) # new single observation
+            if episode_iterator < 8:
+                state, obs4, reward, DONE_FLAG, meta = env.step(env.action_num("Throttle Up")) # new single observation
             else:
-                state, obs, reward, DONE_FLAG, meta = env.step(action) # new single observation
+                state, obs4, reward, DONE_FLAG, meta = env.step(action) # new single observation
             
             # Pause Sim
             env.client.simPause(True)
-            
-            # Reduce dimentionality of obs
-            obs4 = trim_append_state_vector(obs4, obs, pop_index = IMG_VIEWS * IMG_CHANNELS) # pop old and append new state obsv
             # Add new reward to running episode return
             episode_return += reward
             
@@ -134,16 +103,7 @@ def train_racing_car(primaryNetwork, targetNetwork,
             if copy_model_iterator % COPY_PERIOD == 0:
                 COPY_MODEL_FLAG = True
             
-            # Send off to the GUI Process!
-            tic2 = time.time()
-            d1 = dict.fromkeys(vehicle_names, np.array(obs4 * 255, dtype = np.uint8))
-            d2 = dict.fromkeys(vehicle_names, state)
-            childImgConn.send(d1) # Make it a image format (unsigned integers)
-            childStateConn.send(d2)
-            print("GUI Process Update Time: ", time.time() - tic2)
-            
             # Print Output
-            #print(state)
             print("Episode: ", episode, ", Iteration: ", 
                   episode_iterator, ", Reward: ", reward,
                   ", Loss: ", loss, ", Action: ", env.action_name(action), ", Ellasped Time: ", time.time() - tic)
@@ -154,18 +114,38 @@ def train_racing_car(primaryNetwork, targetNetwork,
         
 def main():
     
-    # Environment returns us the states, rewards, and communicates with the Unreal Simulator
-    UREnv = CarUnrealEnvironment(image_mask_FC_FR_FL = [True, True, True], mode = "both_gray_normal") # Returns both the image obs and the inertial state
-    
     #data_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Projects\\Car\\Data"
     model_dir = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Network_Models\\Car\\model_racing_car"
     
+    vehicle_name = "Car1"
+    image_mask_FC_FR_FL = [True, True, True] # Full front 180 view
+    action_duration = .08
+    sim_mode = "both_gray"
+    IMG_HEIGHT = 128
+    IMG_WIDTH = 128
+    IMG_STEP = 3
+    UREnv = AutoCarUnrealEnvironment(vehicle_name = vehicle_name,
+                                        action_duration = action_duration,
+                                        image_mask_FC_FR_FL = image_mask_FC_FR_FL,
+                                        sim_mode = sim_mode,
+                                        IMG_HEIGHT = IMG_HEIGHT,
+                                        IMG_WIDTH = IMG_WIDTH,
+                                        IMG_STEP = IMG_STEP)
+    
+    
+    # RL Agent
+    IMG_CHANNELS = 1
+    if 'rgb' in sim_mode:
+        IMG_CHANNELS = 3
+    IMG_VIEWS = np.sum(np.array(image_mask_FC_FR_FL, dtype = np.int))
     xdims = (IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS * IMG_VIEWS * IMG_STEP)
     n_outputs = 7 # Drive Commands -- See car drive env
+    
+    # Layer+Network Config
     hidden_layer_sizes = [800,400]
     gamma = .99
     learning_rate = 1e-2
-    trainig_batch_size = 32
+    trainig_batch_size = 8
     
     # Initialize the primary and target networks
     primaryNetwork = CDQN(xdims, n_outputs, hidden_layer_sizes, 
