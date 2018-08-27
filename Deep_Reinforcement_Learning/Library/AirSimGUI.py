@@ -22,21 +22,19 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib import cm
 from PIL import ImageTk, Image
 
-
 class QuadcopterGUI(multiprocessing.Process):
     
-    def __init__(self, statePipe, imagePipe, vehicle_names, num_video_feeds, isRGB = True):
+    def __init__(self, dataPipe, vehicle_names, num_video_feeds, isRGB = True, isNormal = False):
         multiprocessing.Process.__init__(self)
-        self.statePipe = statePipe
-        self.imagePipe = imagePipe
+        self.dataPipe = dataPipe
         self.vehicle_names = vehicle_names
         self.num_video_feeds = num_video_feeds
         self.isRGB = isRGB
+        self.isNormal = isNormal
+        self.start()
     
-        self.start() # go to the run function
-        
     def run(self):
-        print("The Application is now running!")
+        print("Start GUI Setup!")
         
         self.root = tk.Tk() # The GUI
         self.root.title("Quadcopter Unreal GUI")
@@ -112,8 +110,7 @@ class QuadcopterGUI(multiprocessing.Process):
         self.label_angaccy.grid(row = 16, column = 0)
         self.label_angaccz.grid(row = 17, column = 0)
         
-        # Entries on GUI:
-        # Labels for state variables
+        # Entries for State Updates:
         self.entry_posx = Entry(self.StateFrame, text = "PosX:")
         self.entry_posy = Entry(self.StateFrame, text = "PosY:")
         self.entry_posz = Entry(self.StateFrame, text = "PosZ:")
@@ -133,7 +130,7 @@ class QuadcopterGUI(multiprocessing.Process):
         self.entry_angaccy = Entry(self.StateFrame, text = "AngAcc Y:")
         self.entry_angaccz = Entry(self.StateFrame, text = "AngAcc Z:")
 
-        # Entries in Grid
+        # Entries Gridded
         self.entry_posx.grid(row = 0, column = 1)
         self.entry_posy.grid(row = 1, column = 1)
         self.entry_posz.grid(row = 2, column = 1)
@@ -153,63 +150,163 @@ class QuadcopterGUI(multiprocessing.Process):
         self.entry_angaccy.grid(row = 16, column = 1)
         self.entry_angaccz.grid(row = 17, column = 1)
         
+        # Meta Data For the State Page
+        self.entry_action = Entry(self.StateFrame, text = "Action")
+        self.entry_action_name = Entry(self.StateFrame, text = "Action Name")
+        self.entry_env_state = Entry(self.StateFrame, text = "Env State")
+        self.entry_mode = Entry(self.StateFrame, text = "GUI Mode")
+        self.entry_act_time = Entry(self.StateFrame, text = "Action Time")
+        self.entry_sim_image_time = Entry(self.StateFrame, text = "Sim Image Get Time")
+        self.entry_sim_state_time = Entry(self.StateFrame, text = "Sim State Get Time")
+        self.entry_reward_time = Entry(self.StateFrame, text = "Sim Calc Reward Time")
+        self.entry_step_time = Entry(self.StateFrame, text = "Step Time")
+        self.entry_reward = Entry(self.StateFrame, text = "Reward")
+        self.entry_done = Entry(self.StateFrame, text = "Done Flag")
+        
+        
+        self.label_action = Label(self.StateFrame, text = "Action:")
+        self.label_action_name = Label(self.StateFrame, text = "Action Name:")
+        self.label_env_state = Label(self.StateFrame, text = "Env State:")
+        self.label_mode = Label(self.StateFrame, text = "GUI Mode:")
+        self.label_act_time = Label(self.StateFrame, text = "Action Time:")
+        self.label_sim_image_time = Label(self.StateFrame, text = "Sim Image Get Time:")
+        self.label_sim_state_time = Label(self.StateFrame, text = "Sim State Get Time:")
+        self.label_reward_time = Label(self.StateFrame, text = "Calc Reward Time:")
+        self.label_step_time = Label(self.StateFrame, text = "Env Step Time:")
+        self.label_reward = Label(self.StateFrame, text = "Reward:")
+        self.label_done = Label(self.StateFrame, text = "Done:")
+        
+        
+        # Grid Meta Data Display
+        self.label_action.grid(row = 5, column = 2)
+        self.label_action_name.grid(row = 6, column = 2)
+        self.label_env_state.grid(row = 7, column = 2)
+        self.label_mode.grid(row = 8, column = 2)
+        self.label_act_time.grid(row = 9, column = 2)
+        self.label_sim_image_time.grid(row = 10, column = 2)
+        self.label_sim_state_time.grid(row = 11, column = 2)
+        self.label_reward_time.grid(row = 12, column = 2)
+        self.label_step_time.grid(row = 13, column = 2)
+        self.label_reward.grid(row = 14, column = 2)
+        self.label_done.grid(row = 15, column = 2)
+        
+        
+        self.entry_action.grid(row = 5, column = 3)
+        self.entry_action_name.grid(row = 6, column = 3)
+        self.entry_env_state.grid(row = 7, column = 3)
+        self.entry_mode.grid(row = 8, column = 3)
+        self.entry_act_time.grid(row = 9, column = 3)
+        self.entry_sim_image_time.grid(row = 10, column = 3)
+        self.entry_sim_state_time.grid(row = 11, column = 3)
+        self.entry_reward_time.grid(row = 12, column = 3)
+        self.entry_step_time.grid(row = 13, column = 3)
+        self.entry_reward.grid(row = 14, column = 3)
+        self.entry_done.grid(row = 15, column = 3)
+        
         # The Image Stramer From the simulator:
         self.VideoFeeds = [None for i in range(self.num_video_feeds)]
-
         
-        # Run the inertial state listener thread
-        self.t_states = threading.Thread(target = self.update_inertial_states, args = ())
-        self.t_states.start() # Start Updater thread by setting the event
-        # Run the Image Data Feed
-        self.t_imgs = threading.Thread(target = self.update_image_feed)
-        self.t_imgs.start()
+        print("GUI Setup DONE!")
+        t_upd = threading.Thread(target = self.updates)
+        t_upd.start()
         
-        # Wait to launch
-        time.sleep(.5)
-        # Launch Application
         self.root.mainloop()
-    
+        
 
-    def update_image_feed(self):
+    
+    def updates(self):
+        while True:
+            # Data comes in as a dictionary of 'obs', 'state', 'meta'
+            data = self.dataPipe.recv()
+            vehicle_name = self.current_vehicle_feed.get()
+            # Run the inertial update thread
+            self.t_states = threading.Thread(target = self.update_inertial_states, 
+                                             args = (data[vehicle_name]['state'],))
+            self.t_states.start() # Start Updater thread by setting the event
+            # Run the Image Data thread
+            self.t_imgs = threading.Thread(target = self.update_image_feeds,
+                                           args = (data[vehicle_name]['obs'],))
+            self.t_imgs.start()
+            # Run the meta data update
+            self.t_meta = threading.Thread(target = self.update_metas,
+                                            args = (data[vehicle_name]['meta'],))
+            self.t_meta.start()
+            
+            # Join Threads
+            self.t_states.join()
+            self.t_imgs.join()
+            self.t_meta.join()
+            
+        
+    def update_metas(self, data):
+        meta = data
+        self.entry_action_name.delete(0,tk.END)
+        self.entry_action_name.insert(0,str(meta['action_name']))
+        self.entry_action.delete(0,tk.END)
+        self.entry_action.insert(0,str(meta['action']))
+        self.entry_env_state.delete(0,tk.END)
+        self.entry_env_state.insert(0,str(meta['env_state']))
+        self.entry_mode.delete(0,tk.END)
+        self.entry_mode.insert(0,str(meta['mode']))
+        self.entry_act_time.delete(0, tk.END)
+        self.entry_act_time.insert(0, str(meta['times']['act_time']))
+        self.entry_sim_image_time.delete(0,tk.END)
+        self.entry_sim_image_time.insert(0,str(meta['times']['sim_img_time']))
+        self.entry_sim_state_time.delete(0,tk.END)
+        self.entry_sim_state_time.insert(0,str(meta['times']['sim_state_time']))
+        self.entry_reward_time.delete(0,tk.END)
+        self.entry_reward_time.insert(0,str(meta['times']['reward_time']))
+        self.entry_step_time.delete(0, tk.END)
+        self.entry_step_time.insert(0, str(meta['times']['step_time']))
+        self.entry_reward.delete(0, tk.END)
+        self.entry_reward.insert(0, str(meta['reward']))
+        self.entry_done.delete(0, tk.END)
+        self.entry_done.insert(0, str(meta['done']))
+
+    def update_image_feeds(self, data):
         scalar = 3
         col_count = 0
         row_count = 0
+        #print('data shape: ', type(data), data.shape)
         if not self.isRGB:
             scalar = 1
-        
-        while True:
-            vehicle_sim_images = self.imagePipe.recv()
-            sim_images = vehicle_sim_images[self.current_vehicle_feed.get()]
-            print("Updating GUI Image Feed")
-            for i in range(self.num_video_feeds):
-                sim_image = sim_images[:,:,scalar*i:scalar*(i+1)]
-                if scalar == 1:
-                    sim_image = np.reshape(sim_image, (sim_image.shape[0], sim_image.shape[1]))
-                if ((i % 3) == 0):
-                    col_count = 0
-                    row_count += 1
-                img = Image.fromarray(sim_image)
-                imgtk = ImageTk.PhotoImage(image = img)
-                if self.VideoFeeds[i] is None: # Initialize the image panel
-                    self.VideoFeeds[i] = Label(self.VideoFrame, image=imgtk)
-                    self.VideoFeeds[i].image = imgtk
-                    self.VideoFeeds[i].grid(row = row_count, column = col_count)
-                else:
-                    self.VideoFeeds[i].configure(image = imgtk)
-                    self.VideoFeeds[i].image = imgtk
-                col_count += 1
-            col_count = 0
-            row_count = 0
-            print("Feed Update")
-            
-             
-    def update_inertial_states(self):
-        while True:
-            current_inertial_states = self.statePipe.recv()
-            print(current_inertial_states)
-            current_inertial_state = current_inertial_states[self.current_vehicle_feed.get()]
-            print('State Update Event Triggered!')
-            print(current_inertial_states, current_inertial_state)
+        sim_images = data
+        print("GUI Image Update:")
+        start_time = time.time()
+        for i in range(self.num_video_feeds):
+            sim_image = sim_images[:,:,scalar*i:scalar*(i+1)]
+            if scalar == 1:
+                sim_image = np.reshape(sim_image, (sim_image.shape[0], sim_image.shape[1]))
+            if ((i % 3) == 0):
+                col_count = 0
+                row_count += 1
+            #print('sim image shape ', sim_image.shape, type(sim_image), sim_image, self.isNormal)
+            if self.isNormal:
+                sim_image = np.array(sim_image * 255, dtype = np.uint8)
+            else:
+                sim_image = np.array(sim_image, dtype = np.uint8)
+            img = Image.fromarray(sim_image)
+            imgtk = ImageTk.PhotoImage(image = img)
+            if self.VideoFeeds[i] is None: # Initialize the image panel
+                self.VideoFeeds[i] = Label(self.VideoFrame, image=imgtk)
+                self.VideoFeeds[i].image = imgtk
+                self.VideoFeeds[i].grid(row = row_count, column = col_count)
+            else:
+                self.VideoFeeds[i].configure(image = imgtk)
+                self.VideoFeeds[i].image = imgtk
+            col_count += 1
+        col_count = 0
+        row_count = 0
+        print("Feed Update Time: ", time.time() - start_time)
+    
+
+    
+    def update_inertial_states(self, data):
+            #print(current_inertial_states)
+            current_inertial_state = data
+            print('GUI State Update!')
+            start_time = time.time()
+            #print(current_inertial_states, current_inertial_state)
             self.entry_posx.delete(0,tk.END)
             self.entry_posx.insert(0, str(current_inertial_state[0]))
             self.entry_posy.delete(0,tk.END)
@@ -246,28 +343,25 @@ class QuadcopterGUI(multiprocessing.Process):
             self.entry_angaccy.insert(0, str(current_inertial_state[16]))
             self.entry_angaccz.delete(0,tk.END)
             self.entry_angaccz.insert(0, str(current_inertial_state[17]))
-
-
-
-
+            print('GUI State Update Time! ', time.time() - start_time)        
+             
 
 
 
 
 class CarGUI(multiprocessing.Process):
     
-    def __init__(self, statePipe, imagePipe, vehicle_names, num_video_feeds, isRGB = True):
+    def __init__(self, dataPipe, vehicle_names, num_video_feeds, isRGB = True, isNormal = False):
         multiprocessing.Process.__init__(self)
-        self.statePipe = statePipe
-        self.imagePipe = imagePipe
+        self.dataPipe = dataPipe
         self.vehicle_names = vehicle_names
         self.num_video_feeds = num_video_feeds
         self.isRGB = isRGB
+        self.isNormal = isNormal
+        self.start()
     
-        self.start() # go to the run function
-        
     def run(self):
-        print("The Application is now running!")
+        print("Start GUI Setup!")
         
         self.root = tk.Tk() # The GUI
         self.root.title("Quadcopter Unreal GUI")
@@ -292,6 +386,7 @@ class CarGUI(multiprocessing.Process):
         self.ax.scatter(np.random.rand(10),np.random.rand(10),np.random.rand(10))
         self.canvas = FigureCanvasTkAgg(self.fig, self.PlottingFrame)
         self.canvas.get_tk_widget().grid(row = 1, column = 0)
+        
         
         # For Switch Vehicle Feeds
         self.current_vehicle_feed = tk.StringVar(self.StateFrame) # Linked to current vehicle choice
@@ -342,8 +437,7 @@ class CarGUI(multiprocessing.Process):
         self.label_angaccy.grid(row = 13, column = 0)
         self.label_angaccz.grid(row = 14, column = 0)
         
-        # Entries on GUI:
-        # Labels for state variables
+        # Entries for State Updates:
         self.entry_posx = Entry(self.StateFrame, text = "PosX:")
         self.entry_posy = Entry(self.StateFrame, text = "PosY:")
         self.entry_posz = Entry(self.StateFrame, text = "PosZ:")
@@ -363,7 +457,7 @@ class CarGUI(multiprocessing.Process):
         self.entry_angaccy = Entry(self.StateFrame, text = "AngAcc Y:")
         self.entry_angaccz = Entry(self.StateFrame, text = "AngAcc Z:")
 
-        # Entries in Grid
+        # Entries Gridded
         self.entry_posx.grid(row = 0, column = 1)
         self.entry_posy.grid(row = 1, column = 1)
         self.entry_posz.grid(row = 2, column = 1)
@@ -383,61 +477,163 @@ class CarGUI(multiprocessing.Process):
         self.entry_angaccy.grid(row = 13, column = 1)
         self.entry_angaccz.grid(row = 14, column = 1)
         
+        # Meta Data For the State Page
+        self.entry_action = Entry(self.StateFrame, text = "Action")
+        self.entry_action_name = Entry(self.StateFrame, text = "Action Name")
+        self.entry_env_state = Entry(self.StateFrame, text = "Env State")
+        self.entry_mode = Entry(self.StateFrame, text = "GUI Mode")
+        self.entry_act_time = Entry(self.StateFrame, text = "Action Time")
+        self.entry_sim_image_time = Entry(self.StateFrame, text = "Sim Image Get Time")
+        self.entry_sim_state_time = Entry(self.StateFrame, text = "Sim State Get Time")
+        self.entry_reward_time = Entry(self.StateFrame, text = "Sim Calc Reward Time")
+        self.entry_step_time = Entry(self.StateFrame, text = "Step Time")
+        self.entry_reward = Entry(self.StateFrame, text = "Reward")
+        self.entry_done = Entry(self.StateFrame, text = "Done Flag")
+        
+        
+        self.label_action = Label(self.StateFrame, text = "Action:")
+        self.label_action_name = Label(self.StateFrame, text = "Action Name:")
+        self.label_env_state = Label(self.StateFrame, text = "Env State:")
+        self.label_mode = Label(self.StateFrame, text = "GUI Mode:")
+        self.label_act_time = Label(self.StateFrame, text = "Action Time:")
+        self.label_sim_image_time = Label(self.StateFrame, text = "Sim Image Get Time:")
+        self.label_sim_state_time = Label(self.StateFrame, text = "Sim State Get Time:")
+        self.label_reward_time = Label(self.StateFrame, text = "Calc Reward Time:")
+        self.label_step_time = Label(self.StateFrame, text = "Env Step Time:")
+        self.label_reward = Label(self.StateFrame, text = "Reward:")
+        self.label_done = Label(self.StateFrame, text = "Done:")
+        
+        
+        # Grid Meta Data Display
+        self.label_action.grid(row = 5, column = 2)
+        self.label_action_name.grid(row = 6, column = 2)
+        self.label_env_state.grid(row = 7, column = 2)
+        self.label_mode.grid(row = 8, column = 2)
+        self.label_act_time.grid(row = 9, column = 2)
+        self.label_sim_image_time.grid(row = 10, column = 2)
+        self.label_sim_state_time.grid(row = 11, column = 2)
+        self.label_reward_time.grid(row = 12, column = 2)
+        self.label_step_time.grid(row = 13, column = 2)
+        self.label_reward.grid(row = 14, column = 2)
+        self.label_done.grid(row = 15, column = 2)
+        
+        
+        self.entry_action.grid(row = 5, column = 3)
+        self.entry_action_name.grid(row = 6, column = 3)
+        self.entry_env_state.grid(row = 7, column = 3)
+        self.entry_mode.grid(row = 8, column = 3)
+        self.entry_act_time.grid(row = 9, column = 3)
+        self.entry_sim_image_time.grid(row = 10, column = 3)
+        self.entry_sim_state_time.grid(row = 11, column = 3)
+        self.entry_reward_time.grid(row = 12, column = 3)
+        self.entry_step_time.grid(row = 13, column = 3)
+        self.entry_reward.grid(row = 14, column = 3)
+        self.entry_done.grid(row = 15, column = 3)
+        
         # The Image Stramer From the simulator:
         self.VideoFeeds = [None for i in range(self.num_video_feeds)]
-
         
-        # Run the inertial state listener thread
-        self.t_states = threading.Thread(target = self.update_inertial_states, args = ())
-        self.t_states.start() # Start Updater thread by setting the event
-        # Run the Image Data Feed
-        self.t_imgs = threading.Thread(target = self.update_image_feed)
-        self.t_imgs.start()
+        print("GUI Setup DONE!")
+        t_upd = threading.Thread(target = self.updates)
+        t_upd.start()
         
-        # Wait to launch
-        time.sleep(.5)
-        # Launch Application
         self.root.mainloop()
-    
+        
 
-    def update_image_feed(self):
+    
+    def updates(self):
+        while True:
+            # Data comes in as a dictionary of 'obs', 'state', 'meta'
+            data = self.dataPipe.recv()
+            vehicle_name = self.current_vehicle_feed.get()
+            # Run the inertial update thread
+            self.t_states = threading.Thread(target = self.update_inertial_states, 
+                                             args = (data[vehicle_name]['state'],))
+            self.t_states.start() # Start Updater thread by setting the event
+            # Run the Image Data thread
+            self.t_imgs = threading.Thread(target = self.update_image_feeds,
+                                           args = (data[vehicle_name]['obs'],))
+            self.t_imgs.start()
+            # Run the meta data update
+            self.t_meta = threading.Thread(target = self.update_metas,
+                                            args = (data[vehicle_name]['meta'],))
+            self.t_meta.start()
+            
+            # Join Threads
+            self.t_states.join()
+            self.t_imgs.join()
+            self.t_meta.join()
+            
+        
+    def update_metas(self, data):
+        meta = data
+        self.entry_action_name.delete(0,tk.END)
+        self.entry_action_name.insert(0,str(meta['action_name']))
+        self.entry_action.delete(0,tk.END)
+        self.entry_action.insert(0,str(meta['action']))
+        self.entry_env_state.delete(0,tk.END)
+        self.entry_env_state.insert(0,str(meta['env_state']))
+        self.entry_mode.delete(0,tk.END)
+        self.entry_mode.insert(0,str(meta['mode']))
+        self.entry_act_time.delete(0, tk.END)
+        self.entry_act_time.insert(0, str(meta['times']['act_time']))
+        self.entry_sim_image_time.delete(0,tk.END)
+        self.entry_sim_image_time.insert(0,str(meta['times']['sim_img_time']))
+        self.entry_sim_state_time.delete(0,tk.END)
+        self.entry_sim_state_time.insert(0,str(meta['times']['sim_state_time']))
+        self.entry_reward_time.delete(0,tk.END)
+        self.entry_reward_time.insert(0,str(meta['times']['reward_time']))
+        self.entry_step_time.delete(0, tk.END)
+        self.entry_step_time.insert(0, str(meta['times']['step_time']))
+        self.entry_reward.delete(0, tk.END)
+        self.entry_reward.insert(0, str(meta['reward']))
+        self.entry_done.delete(0, tk.END)
+        self.entry_done.insert(0, str(meta['done']))
+
+    def update_image_feeds(self, data):
         scalar = 3
         col_count = 0
         row_count = 0
+        #print('data shape: ', type(data), data.shape)
         if not self.isRGB:
             scalar = 1
-        
-        while True:
-            vehicle_sim_images = self.imagePipe.recv()
-            sim_images = vehicle_sim_images[self.current_vehicle_feed.get()]
-            for i in range(self.num_video_feeds):
-                sim_image = sim_images[:,:,scalar*i:scalar*(i+1)]
-                
-                if scalar == 1:
-                    sim_image = np.reshape(sim_image, (sim_image.shape[0], sim_image.shape[1]))
-                if ((i % 3) == 0):
-                    col_count = 0
-                    row_count += 1
-                img = Image.fromarray(sim_image)
-                imgtk = ImageTk.PhotoImage(image = img)
-                if self.VideoFeeds[i] is None: # Initialize the image panel
-                    self.VideoFeeds[i] = Label(self.VideoFrame, image=imgtk)
-                    self.VideoFeeds[i].image = imgtk
-                    self.VideoFeeds[i].grid(row = row_count, column = col_count)
-                else:
-                    self.VideoFeeds[i].configure(image = imgtk)
-                    self.VideoFeeds[i].image = imgtk
-                col_count += 1
-            col_count = 0
-            row_count = 0
-            print("Feed Update")
-            
-             
-    def update_inertial_states(self):
-        while True:
-            current_inertial_states = self.statePipe.recv()
-            current_inertial_state = current_inertial_states[self.current_vehicle_feed.get()]
+        sim_images = data
+        print("GUI Image Update:")
+        start_time = time.time()
+        for i in range(self.num_video_feeds):
+            sim_image = sim_images[:,:,scalar*i:scalar*(i+1)]
+            if scalar == 1:
+                sim_image = np.reshape(sim_image, (sim_image.shape[0], sim_image.shape[1]))
+            if ((i % 3) == 0):
+                col_count = 0
+                row_count += 1
+            #print('sim image shape ', sim_image.shape, type(sim_image), sim_image, self.isNormal)
+            if self.isNormal:
+                sim_image = np.array(sim_image * 255, dtype = np.uint8)
+            else:
+                sim_image = np.array(sim_image, dtype = np.uint8)
+            img = Image.fromarray(sim_image)
+            imgtk = ImageTk.PhotoImage(image = img)
+            if self.VideoFeeds[i] is None: # Initialize the image panel
+                self.VideoFeeds[i] = Label(self.VideoFrame, image=imgtk)
+                self.VideoFeeds[i].image = imgtk
+                self.VideoFeeds[i].grid(row = row_count, column = col_count)
+            else:
+                self.VideoFeeds[i].configure(image = imgtk)
+                self.VideoFeeds[i].image = imgtk
+            col_count += 1
+        col_count = 0
+        row_count = 0
+        print("Feed Update Time: ", time.time() - start_time)
+    
+
+    
+    def update_inertial_states(self, data):
+            #print(current_inertial_states)
+            current_inertial_state = data
             print('GUI State Update!')
+            start_time = time.time()
+            #print(current_inertial_states, current_inertial_state)
             self.entry_posx.delete(0,tk.END)
             self.entry_posx.insert(0, str(current_inertial_state[0]))
             self.entry_posy.delete(0,tk.END)
@@ -474,6 +670,9 @@ class CarGUI(multiprocessing.Process):
             self.entry_angaccy.insert(0, str(current_inertial_state[13]))
             self.entry_angaccz.delete(0,tk.END)
             self.entry_angaccz.insert(0, str(current_inertial_state[14]))
+            print('GUI State Update Time! ', time.time() - start_time)        
+             
+
 
 
 

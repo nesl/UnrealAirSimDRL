@@ -66,6 +66,8 @@ class XboxControllerTCPHost(TCPHost.TCPHost):
 
 if __name__ == "__main__":
     path = os.path.dirname(os.path.abspath(__file__)) + "\\XboxHost.csv"
+    host = "192.168.1.195"
+    port = 5000
     xbh = XboxControllerTCPHost(write_to_path = path)
     while True:
         xbh.send_controller_update()

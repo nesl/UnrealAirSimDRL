@@ -460,9 +460,9 @@ class XBoxListener(threading.Thread):
         self.now = time.time() - self.time_start
         return xboxq.get()
         #self.xboxq.put(xboxInput)
-
-
-#################################
+#
+#
+##################################
 #if __name__ == "__main__":
 #    xbl = XBoxListener(sample_rate = .02)
 #    xbl.init()
