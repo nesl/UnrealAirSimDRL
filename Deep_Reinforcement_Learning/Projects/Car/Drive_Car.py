@@ -10,11 +10,11 @@ Created on Thu Oct 19 17:16:38 2017
 # This algorithm uses an extended state space for training puposes
 
 # Import Essentials
-import sys
-sys.path.append("..\\..\\..\\Util")
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
 from XboxListener import XBoxListener
 # Import Reinforcement learning Library
-sys.path.append("..\\..\\Library\\ClientAirSimEnvironments")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Library\\ClientAirSimEnvironments")
 from ManualCarUnrealEnvironment import ManualCarUnrealEnvironment
 
 # Train the car to self drive -- SKEERTTTT!!!!!!!!!

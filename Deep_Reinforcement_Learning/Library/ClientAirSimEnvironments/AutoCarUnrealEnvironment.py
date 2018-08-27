@@ -7,15 +7,15 @@ Created on Sun Aug 26 17:51:21 2018
 
 import numpy as np
 import time
-import sys
+import sys, os
 import multiprocessing 
 import threading
 from RewardingFunctions import car_racing_rewarding_function
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Library")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..")
 from airsim import client
 from airsim.types import Vector3r
 import AirSimGUI
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
 from ImageProcessing import trim_append_state_vector
 
         
