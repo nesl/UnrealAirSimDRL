@@ -31,39 +31,29 @@ class AutoCarUnrealEnvironment:
                  sim_mode = "rgb",
                  IMG_HEIGHT = 128,
                  IMG_WIDTH = 128,
-                 IMG_STEP = 3,
+                 IMG_STEP = 1,
                  reward_function = car_racing_rewarding_function):
         
         # Set reward function
-        self.reward_function = reward_function
-        
+        self.reward_function = reward_function        
         # Set Environment Return options
         self.action_duration = action_duration
         self.mode = sim_mode
         
-        # Set Drive Commands to zero initially
-        self._throttle = 0 # Used as a constant gain factor for the action throttle. 
-        self._steering = 0 # Each action lasts this many seconds
-        self._brake  = 0
-        
-        self.THROTTLE_INC = .10
-        self.THROTTLE_DEC = -.10
-        self.BRAKE_INC = .10
-        self.BRAKE_DEC = -.20
-        self.STEER_LEFT_INC = -.10
-        self.STEER_RIGHT_INC = .10
-        
         # Simulator Image setup
         self.IMG_HEIGHT = IMG_HEIGHT
         self.IMG_WIDTH = IMG_WIDTH
-        isRGB = False
+        self.gui_data = {'obs': None, 'state': None, 'meta': None}
+        self.vehicle_name = vehicle_name
+        
+        self.isRGB = False
         IMG_CHANNELS = 1
         if 'rgb' in self.mode:
-            isRGB = True
+            self.isRGB = True
             IMG_CHANNELS = 3
-        isNormal = False
+        self.isNormal = False
         if 'normal' in self.mode:
-            isNormal = True
+            self.isNormal = True
         
         self.IMG_CHANNELS = IMG_CHANNELS
         self.IMG_STEP = IMG_STEP
@@ -88,6 +78,31 @@ class AutoCarUnrealEnvironment:
         self.image_mask_rgba = np.array([ [0+4*i,1+4*i,2+4*i] for m, i in zip(image_mask_FC_FR_FL, range(3)) if m]).reshape(-1)
         self.image_mask_FC_FR_FL = image_mask_FC_FR_FL
         
+        # Timing Operations Initialize
+        self.time_to_do_action = 0
+        self.time_to_grab_images = 0
+        self.time_to_grab_states = 0
+        self.time_to_calc_reward = 0
+        self.time_to_step = 0
+        self.extra_metadata = None
+        
+        self.init_vehicle()
+        
+        
+    def init_vehicle(self):
+        
+        # Set Drive Commands to zero initially
+        self._throttle = 0 # Used as a constant gain factor for the action throttle. 
+        self._steering = 0 # Each action lasts this many seconds
+        self._brake  = 0
+        
+        self.THROTTLE_INC = .10
+        self.THROTTLE_DEC = -.10
+        self.BRAKE_INC = .10
+        self.BRAKE_DEC = -.20
+        self.STEER_LEFT_INC = -.10
+        self.STEER_RIGHT_INC = .10
+        
         # Connect to the AirSim simulator and begin:
         print('Initializing Car Client')
         self.client = client.CarClient()
@@ -106,20 +121,11 @@ class AutoCarUnrealEnvironment:
         print("Setting Camera Views DONE!")
 
         # Set up GUI Video Feeder
-        self.gui_data = {'obs': None, 'state': None, 'meta': None}
-        self.vehicle_name = vehicle_name
-        num_video_feeds = np.sum(np.array(self.image_mask_FC_FR_FL, dtype = np.int)) * IMG_STEP
+        num_video_feeds = np.sum(np.array(self.image_mask_FC_FR_FL, dtype = np.int)) * self.IMG_STEP
         GUIConn, self.simEnvDataConn = multiprocessing.Pipe()
-        self.app = AirSimGUI.CarGUI(GUIConn, vehicle_names = [vehicle_name],
-                                                   num_video_feeds = num_video_feeds, isRGB = isRGB, isNormal = isNormal)
+        self.app = AirSimGUI.CarGUI(GUIConn, vehicle_names = [self.vehicle_name],
+                                                   num_video_feeds = num_video_feeds, isRGB = self.isRGB, isNormal = self.isNormal)
         
-        # Timing Operations Initialize
-        self.time_to_do_action = 0
-        self.time_to_grab_images = 0
-        self.time_to_grab_states = 0
-        self.time_to_calc_reward = 0
-        self.time_to_step = 0
-        self.extra_metadata = None
 
     # This is the List of all possible actions for the Car:
     # throttle_up = +.1 (speed up)
@@ -189,7 +195,6 @@ class AutoCarUnrealEnvironment:
             print("invalid Mode!")
     
     def send_to_gui(self, action, reward, done):
-        
         self.extra_metadata = {'action': action, 'action_name': self.action_name(action), 'env_state': {'resetting': False, 'running': True},
                                'mode': self.mode, 'reward': reward, 'done': done, 'times': {'act_time': self.time_to_do_action,
                                                             'sim_img_time': self.time_to_grab_images,
@@ -205,20 +210,17 @@ class AutoCarUnrealEnvironment:
         t_gui.join()
     
     
-    # Ask the simulator to return attitude information (private)
-    # Modes are: Return inertial information, return camera images, or you can return both
-    def pset_simulator_state_info(self):
+    def set_simulator_inertial_state(self):
         # This function will set the latest simulator information within the class
         # The State's components will be 
-        tic = time.time()
         # Get Base Inertial States
-        state = self.client.simGetGroundTruthKinematics()
-        pos = (state['position']['x_val'],state['position']['y_val'],state['position']['z_val'])
-        vel = (state['linear_velocity']['x_val'],state['linear_velocity']['y_val'],state['linear_velocity']['z_val'])
+        state = self.client.simGetGroundTruthKinematics() 
+        pos = (state['position']['x_val'], state['position']['y_val'], state['position']['z_val'])
+        vel = (state['linear_velocity']['x_val'], state['linear_velocity']['y_val'], state['linear_velocity']['z_val'])
         acc = (state['linear_acceleration']['x_val'],state['linear_acceleration']['y_val'],state['linear_acceleration']['z_val'])
         angVel = (state['angular_velocity']['x_val'],state['angular_velocity']['y_val'],state['angular_velocity']['z_val'])
         angAcc = (state['angular_acceleration']['x_val'],state['angular_acceleration']['y_val'],state['angular_acceleration']['z_val'])
-        
+         
         # Store the current state
         self.current_inertial_state = np.array([pos[0] - self.initial_position[0], 
                                                 pos[1] - self.initial_position[1],
@@ -229,12 +231,19 @@ class AutoCarUnrealEnvironment:
                                                 acc[0], acc[1], acc[2],
                                                 angVel[0], angVel[1], angVel[2],
                                                 angAcc[0], angAcc[1], angAcc[2]])
+    
+    # Ask the simulator to return attitude information (private)
+    # Modes are: Return inertial information, return camera images, or you can return both
+    def pset_simulator_state_info(self):
+        tic = time.time()
+        self.set_simulator_inertial_state()
         self.time_to_grab_states = time.time() - tic
         print('Time to grab states: ', self.time_to_grab_states)
         
         self.get_new_images()    
         print("Time to Grab All Images: ", self.time_to_grab_images)
         
+    
     def get_new_images(self):
         # Construct the Images State Vector
         # Order is Front Center, Front Right, Front Left
@@ -278,7 +287,7 @@ class AutoCarUnrealEnvironment:
             self.images_rgb = img_rgb_FC
             self.time_to_grab_images = time.time() - tic
         self.client.simPause(False)
-        
+    
     
     def get_last_obs(self, mode = None):
         if mode is None:
@@ -485,8 +494,6 @@ class AutoCarUnrealEnvironment:
                state['linear_velocity']['y_val'],
                state['linear_velocity']['z_val'])
         
-        self.dt = 0
-        self.tic = time.time()
         # Set the environment state and image properties from the simulator
         self.pset_simulator_state_info()
         
@@ -495,7 +502,7 @@ class AutoCarUnrealEnvironment:
         self.steering = 0
         self.brake = 0
         
-        self.extra_metadata = {'action': 0, 'action_name': 0, 'env_state': {'resetting': True, 'running': False},
+        self.extra_metadata = {'action': 0, 'action_name': 0, 'env_state': 0,
                                'mode': 0, 'reward': 0, 'done': 0, 'times': {'act_time': 0,
                                                             'sim_img_time': 0,
                                                             'sim_state_time': 0,

@@ -123,51 +123,52 @@ class ManualCarUnrealEnvironment:
         
         self.time_to_step = time.time() - tic
         print('Time to step: ', self.time_to_step)
-        reward = 0
+        
         collision = self.client.simGetCollisionInfo()
         done = collision.has_collided
+        
         # Send the data collected off to gui
-        self.send_to_gui(0, 0, False)
+        self.send_to_gui(action, done)
         if self.mode == "inertial":
-            return (self.current_inertial_state, reward, done, self.extra_metadata)
+            return (self.current_inertial_state, done, self.extra_metadata)
         elif self.mode == "rgb":
             # Reduce dimentionality of obs
             self.obs4 = trim_append_state_vector(self.obs4, self.images_rgb[:,:,self.image_mask_rgb], pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.obs4, reward, done, self.extra_metadata)
+            return (self.obs4, done, self.extra_metadata)
         elif self.mode == "rgb_normal":
             self.obs4 = trim_append_state_vector(self.obs4, self.rgbs2rgbs_normal(), pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.obs4, reward, done, self.extra_metadata)
+            return (self.obs4, done, self.extra_metadata)
         elif self.mode == "rgba":
             self.obs4 = trim_append_state_vector(self.obs4, self.rgbs2rgbs_normal(), pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.obs4, reward, done, self.extra_metadata)
+            return (self.obs4, done, self.extra_metadata)
         elif self.mode == "gray":
             self.obs4 = trim_append_state_vector(self.obs4, self.rgbs2grays(), pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.obs4, reward, done, self.extra_metadata)
+            return (self.obs4, done, self.extra_metadata)
         elif self.mode == "gray_normal":
             self.obs4 = trim_append_state_vector(self.obs4, self.rgbs2grays() / 255, pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.obs4, reward, done, self.extra_metadata)
+            return (self.obs4, done, self.extra_metadata)
         elif self.mode == "both_rgb":
             self.obs4 = trim_append_state_vector(self.obs4, self.images_rgb[:,:, self.image_mask_rgb], pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.current_inertial_state, self.obs4, reward, done, self.extra_metadata)
+            return (self.current_inertial_state, self.obs4, done, self.extra_metadata)
         elif self.mode == "both_rgb_normal":
             self.obs4 = trim_append_state_vector(self.obs4, self.rgbs2rgbs_normal(), pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.current_inertial_state, self.obs4, reward, done, self.extra_metadata)
+            return (self.current_inertial_state, self.obs4, done, self.extra_metadata)
         elif self.mode == "both_rgba": 
             self.obs4 = trim_append_state_vector(self.obs4, self.images_rgba[:,:, self.image_mask_rgba], pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.current_inertial_state, self.obs4, reward, done, self.extra_metadata)
+            return (self.current_inertial_state, self.obs4, done, self.extra_metadata)
         elif self.mode == "both_gray":
             self.obs4 = trim_append_state_vector(self.obs4, self.rgbs2grays(), pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.current_inertial_state, self.obs4, reward, done, self.extra_metadata)
+            return (self.current_inertial_state, self.obs4, done, self.extra_metadata)
         elif self.mode == "both_gray_normal":
             self.obs4 = trim_append_state_vector(self.obs4, self.rgbs2grays()/ 255, pop_index = self.IMG_VIEWS * self.IMG_CHANNELS) # pop old and append new state obsv
-            return (self.current_inertial_state, self.obs4, reward, done, self.extra_metadata)
+            return (self.current_inertial_state, self.obs4, done, self.extra_metadata)
         else:
             print("invalid Mode!")
     
-    def send_to_gui(self, action, reward, done):
+    def send_to_gui(self, action, done):
         
-        self.extra_metadata = {'action': action, 'action_name': self.action_name(action), 'env_state': {'resetting': False, 'running': True},
-                               'mode': self.mode, 'reward': reward, 'done': done, 'times': {'act_time': self.time_to_do_action,
+        self.extra_metadata = {'action': action['throttle'], 'action_name': 'Throttle', 'env_state': 'running',
+                               'mode': self.mode, 'reward': 0, 'done': done, 'times': {'act_time': self.time_to_do_action,
                                                             'sim_img_time': self.time_to_grab_images,
                                                             'sim_state_time': self.time_to_grab_states,
                                                             'reward_time': self.time_to_calc_reward,
@@ -228,16 +229,9 @@ class ManualCarUnrealEnvironment:
             img_rgba_FR = np.array(img1d_FR.reshape(images[1].height, images[1].width, 4), dtype = np.uint8)
             img_rgb_FR = img_rgba_FR[:,:,0:3]
             
-            #plt.imshow(img_rgb_FR)
-            #plt.show()
-            #time.sleep(2)
-            
             img1d_FL = np.fromstring(images[2].image_data_uint8, dtype=np.uint8) 
             img_rgba_FL = np.array(img1d_FL.reshape(images[2].height, images[2].width, 4), dtype = np.uint8)
             img_rgb_FL = img_rgba_FL[:,:,0:3]
-            #plt.imshow(img_rgb_FL)
-            #plt.show()
-            #time.sleep(2)
             
             # Can either use the RGBA images or the RGB Images
             self.images_rgba = np.dstack((img_rgba_FC,img_rgba_FR,img_rgba_FL))
@@ -409,7 +403,6 @@ class ManualCarUnrealEnvironment:
         self.client.reset()
         self.client.confirmConnection()
         self.client.enableApiControl(True)
-        time.sleep(.5) # to make sure acceleration doesnt come back insane the first loop
         print('Reset Complete')
         # Start Timer for episode's first step:
         #state = self.client.getCarState()
@@ -422,8 +415,6 @@ class ManualCarUnrealEnvironment:
                state['linear_velocity']['y_val'],
                state['linear_velocity']['z_val'])
         
-        self.dt = 0
-        self.tic = time.time()
         # Set the environment state and image properties from the simulator
         self.pset_simulator_state_info()
         

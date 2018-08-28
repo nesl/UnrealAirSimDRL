@@ -22,7 +22,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Library"
 from CDQN import CDQN
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Library\\ClientAirSimEnvironments")
 from AutoCarUnrealEnvironment import AutoCarUnrealEnvironment
-
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # Train the car to self drive -- SKEERTTTT!!!!!!!!!

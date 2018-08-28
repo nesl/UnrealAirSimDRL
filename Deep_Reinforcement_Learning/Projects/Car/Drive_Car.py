@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Library\
 from ManualCarUnrealEnvironment import ManualCarUnrealEnvironment
 
 # Train the car to self drive -- SKEERTTTT!!!!!!!!!
-def train_racing_car(env, 
+def drive_racing_car(env, 
                      NUM_EPISODES = 1000):
     print("Xbox On!")
     xbl = XBoxListener(.025)
@@ -33,16 +33,17 @@ def train_racing_car(env,
             # Sample action 
             xbox_controls = xbl.get()
             if xbox_controls is None:
-                _, _, _, DONE_FLAG, _ = env.step(action) # new single observation
+                _, _, DONE_FLAG, _ = env.step(action) # new single observation
             else:
                 if xbox_controls["LA"] == "ly":
                     action['throttle'] = 2*xbox_controls["LAV"]
+                    action['brake'] = 0
                 elif xbox_controls["LA"] == "lx":
                     action['steering'] = 2*xbox_controls["LAV"]
                 elif xbox_controls["LA"] == "rt":
                     action['brake'] = xbox_controls["LAV"]
                     # Update Stacked State
-                    _, _, _, DONE_FLAG, _ = env.step(action) # new single observation
+                    _, _, DONE_FLAG, _ = env.step(action) # new single observation
             
             
 def main():
@@ -54,7 +55,7 @@ def main():
     sim_mode = "both_gray"
     IMG_HEIGHT = 128
     IMG_WIDTH = 128
-    IMG_STEP = 3
+    IMG_STEP = 1
     UREnv = ManualCarUnrealEnvironment(vehicle_name = vehicle_name,
                                         input_mode = input_mode,
                                         action_duration = action_duration,
@@ -63,11 +64,9 @@ def main():
                                         IMG_HEIGHT = IMG_HEIGHT,
                                         IMG_WIDTH = IMG_WIDTH,
                                         IMG_STEP = IMG_STEP)
-    
-    
     # Train the Vehicle
     print('Vehicle Ready!')
-    train_racing_car(UREnv)
+    drive_racing_car(UREnv)
     
 if __name__ == '__main__':
     main()

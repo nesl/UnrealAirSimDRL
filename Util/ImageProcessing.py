@@ -24,15 +24,17 @@ def get_image_transforms(images):
     # where obs4 is the stacked element and obs is the new chunck of data to stack in
 def trim_append_state_vector(obs4, obs, repeat = 1, pop_index = 1): 
         # assumed obs4 and obs have the same nominal dimension
-        print(obs.shape, obs4.shape)
-        for i in range(repeat):
-            obs_shape = obs.shape
-            if len(obs_shape) == 2:
-                obs = obs.reshape(obs_shape[0], obs_shape[1], 1)
-                obs4 = np.dstack((obs4[:,:,1:], obs))
-            elif len(obs_shape) == 3:
-                obs4 = np.dstack((obs4[:,:,pop_index:], obs))
-        return obs4
+        if obs4.shape[2] == obs.shape[2]:
+            return obs
+        else:
+            for i in range(repeat):
+                obs_shape = obs.shape
+                if len(obs_shape) == 2:
+                    obs = obs.reshape(obs_shape[0], obs_shape[1], 1)
+                    obs4 = np.dstack((obs4[:,:,1:], obs))
+                elif len(obs_shape) == 3:
+                    obs4 = np.dstack((obs4[:,:,pop_index:], obs))
+            return obs4
 
 
 # Assure you are good for v_stack here
