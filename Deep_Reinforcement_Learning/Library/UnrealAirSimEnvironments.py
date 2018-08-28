@@ -13,7 +13,7 @@ import AirSimGUI
 import multiprocessing 
 import threading
 import sys
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Util")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Util")
 from ImageProcessing import trim_append_state_vector, fill_state_vector
 
 # The drone is incentivized to use its vision to cruise around the world at 5 meters

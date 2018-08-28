@@ -2,10 +2,10 @@ import tensorflow as tf
 from sklearn.preprocessing import LabelBinarizer
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+import sys, os
 #os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Neural_Network")
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\Neural_Network")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\Util")
 import CNNBlocks
 from FullyConnectedLayer import FullyConnectedLayer
 import ExcelLoader as XL

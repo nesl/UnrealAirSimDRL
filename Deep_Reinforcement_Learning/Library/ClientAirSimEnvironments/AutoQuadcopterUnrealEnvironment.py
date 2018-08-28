@@ -8,12 +8,13 @@ Created on Sun Aug 26 17:50:26 2018
 
 import numpy as np
 import time
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..")
 from airsim import client
 from airsim.types import Vector3r
 import AirSimGUI
 import multiprocessing 
-import sys
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Util")
 from ImageProcessing import trim_append_state_vector
 from RewardingFunctions import drone_forest_racer_rewarding_function
 
