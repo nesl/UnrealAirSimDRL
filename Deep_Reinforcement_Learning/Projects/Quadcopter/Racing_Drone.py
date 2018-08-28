@@ -137,7 +137,7 @@ def main():
     hidden_layer_sizes = [800,400]
     gamma = .99
     learning_rate = 1e-2
-    trainig_batch_size = 32
+    trainig_batch_size = 8
     
     # Initialize the primary and target networks
     primaryNetwork = CDQN(xdims, n_outputs, hidden_layer_sizes, 

@@ -22,7 +22,6 @@ sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Rein
 from CDQN import CDQN
 sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Library\\ClientAirSimEnvironments")
 from AutoCarUnrealEnvironment import AutoCarUnrealEnvironment
-
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # Train the car to self drive -- SKEERTTTT!!!!!!!!!
