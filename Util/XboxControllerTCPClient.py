@@ -61,7 +61,7 @@ class XboxControllerTCPClient(TCPClient.TCPClient):
 
 
 if __name__ == "__main__":
-    path = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util\\XboxClient1.csv"
+    path = os.path.dirname(os.path.abspath(__file__)) + "\\XboxClient1.csv"
     xbc = XboxControllerTCPClient(write_to_path = path)
     kbl = KeyboardListener.KeyboardListener(on_release = False, isPrintOnPress = True)  
     while True:

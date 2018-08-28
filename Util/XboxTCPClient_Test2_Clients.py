@@ -10,6 +10,7 @@ Created on Wed Aug 22 14:21:47 2018
 import time
 import XboxControllerTCPClient
 import KeyboardListener
+import os
 
 path = os.path.dirname(os.path.abspath(__file__)) + "\\XboxClient2.csv"
 xbc = XboxControllerTCPClient.XboxControllerTCPClient(write_to_path = path)
