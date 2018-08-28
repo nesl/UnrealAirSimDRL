@@ -11,11 +11,11 @@ import sys, os
 import multiprocessing 
 import threading
 from RewardingFunctions import car_racing_rewarding_function
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..")
 from airsim import client
 from airsim.types import Vector3r
 import AirSimGUI
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
 from ImageProcessing import trim_append_state_vector
 
         

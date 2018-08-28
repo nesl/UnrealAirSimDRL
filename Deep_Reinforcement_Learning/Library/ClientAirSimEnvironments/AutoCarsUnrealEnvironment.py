@@ -7,6 +7,9 @@ Created on Sun Aug 26 17:52:05 2018
 
 import numpy as np
 import time
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..")
 from airsim import client
 from airsim.types import Vector3r, Quaternionr
 import sys, os
@@ -15,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..")
 import AirSimGUI
 import multiprocessing 
 import threading
-from ImageProcessing import trim_append_state_vector, fill_state_vector
+from ImageProcessing import trim_append_state_vector
 
 
 

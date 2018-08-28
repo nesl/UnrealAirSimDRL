@@ -8,6 +8,9 @@ Created on Sun Aug 26 17:50:26 2018
 
 import numpy as np
 import time
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..")
 from airsim import client
 from airsim.types import Vector3r
 import sys, os
