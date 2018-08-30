@@ -89,11 +89,11 @@ class ManualCarUnrealEnvironment:
         
         print("Setting Camera Views")
         orien = Vector3r(0, 0, 0)
-        self.client.simSetCameraOrientation(0, orien) #radians
+        self.client.simSetCameraOrientation("0", orien) #radians
         orien = Vector3r(0, .12, -np.pi/9)
-        self.client.simSetCameraOrientation(1, orien)
+        self.client.simSetCameraOrientation("1", orien)
         orien = Vector3r(0, .12, np.pi/9)
-        self.client.simSetCameraOrientation(2, orien)
+        self.client.simSetCameraOrientation("2", orien)
         # Reset Collion Flags
         print("Setting Camera Views DONE!")
 

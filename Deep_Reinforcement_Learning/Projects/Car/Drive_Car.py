@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Library\
 from ManualCarUnrealEnvironment import ManualCarUnrealEnvironment
 
 # Train the car to self drive -- SKEERTTTT!!!!!!!!!
-def drive_racing_car(env, 
+def drive_racing_car(env,
                      NUM_EPISODES = 1000):
     print("Xbox On!")
     xbl = XBoxListener(.025)

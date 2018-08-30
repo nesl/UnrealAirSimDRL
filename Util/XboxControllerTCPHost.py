@@ -65,7 +65,7 @@ class XboxControllerTCPHost(TCPHost.TCPHost):
 
 
 if __name__ == "__main__":
-    host = "192.168.1.195"
+    host = "127.0.0.1"
     port = 5000
     path = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util\\XboxHost.csv"
     xbh = XboxControllerTCPHost(write_to_path = path)
