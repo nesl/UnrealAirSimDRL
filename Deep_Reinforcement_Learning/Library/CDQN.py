@@ -9,8 +9,8 @@ Created on Fri Aug  3 15:00:44 2018
 import tensorflow as tf
 import numpy as np
 import sys
-sys.path.append("../../Util/Neural_Network")
-sys.path.append("../../Util/Convolutional Neural Networks (CNN)")
+sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Neural_Network")
+sys.path.append("D:\Desktop\Research\Machine_Learning\Anaconda\Spyder\Reinforcement_Learning_Master\Convolutional Neural Networks (CNN)")
 import FullyConnectedLayer as FCL
 import CNNBlocks
 import time as time

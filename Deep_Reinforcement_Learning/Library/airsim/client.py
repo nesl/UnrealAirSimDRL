@@ -11,11 +11,10 @@ import math
 import logging
 
 class VehicleClient:
-    def __init__(self, ip = "", port = 41451, timeout_value = 3600):##c
+    def __init__(self, ip = "", port = 41451, timeout_value = 3600):
         if (ip == ""):
-            ip = "127.0.0.1" ##c
-        self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = timeout_value, 
-                                        pack_encoding = 'utf-8', unpack_encoding = 'utf-8')
+            ip = "127.0.0.1"
+        self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = timeout_value, pack_encoding = 'utf-8', unpack_encoding = 'utf-8')
         
     # -----------------------------------  Common vehicle APIs ---------------------------------------------
     def reset(self):

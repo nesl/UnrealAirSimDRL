@@ -19,7 +19,7 @@ lock = threading.Lock()
 
 class TCPHost(threading.Thread):
     def __init__(self, host = "127.0.0.1",
-                 port = 5000,        
+                 port = 5000,
                  buff_size = 1024,
                  listen_for = 1):
         threading.Thread.__init__(self)
