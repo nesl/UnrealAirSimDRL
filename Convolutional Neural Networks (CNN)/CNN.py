@@ -46,14 +46,16 @@ class CNN():
         # Stack Convolutional Blocks
         ConvBlock = CNNBlocks.VGGConvPoolBlock128()
         self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.VGGConvPoolBlock128()
+        self.CNN_Block_Layers.append(ConvBlock)
         ConvBlock = CNNBlocks.VGGConvPoolBlock256()
         self.CNN_Block_Layers.append(ConvBlock)
-        #ConvBlock = CNNBlocks.VGGConvPoolBlock256()
-        #self.CNN_Block_Layers.append(ConvBlock)
-        #ConvBlock = CNNBlocks.VGGConvPoolBlock512()
-        #self.CNN_Block_Layers.append(ConvBlock)
-        #ConvBlock = CNNBlocks.VGGConvPoolBlock512()
-        #self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.VGGConvPoolBlock256()
+        self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.VGGConvPoolBlock512()
+        self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.VGGConvPoolBlock512()
+        self.CNN_Block_Layers.append(ConvBlock)
         
         # Determine Number of Stacked Convolutional Blocks
         self.num_conv_blocks = len(self.CNN_Block_Layers)
@@ -179,109 +181,64 @@ class CNN():
     def close(self):
         self.sess.run(tf.global_variables_initializer())
 
-### Start Network Training ##########
-
-#Image Properties
-IM_WIDTH = 28
-IM_HEIGHT = 28
-IM_CHANNELS = 1
-
-# Load in the CiFar-10 Dataset
-#(X,y) = XL.get_cifar10(data_set = 3)
-[X_train, y_train, X_test, y_test] = XL.get_mnist(norm = True)
-
-# Reshape the Y data
-lb = LabelBinarizer()
-Y_train = lb.fit_transform(y_train)
-Y_test = lb.fit_transform(y_test)
-#plt.imshow(X[1], cmap = 'gray')
-
-# I/O Network Parameters
-idim = (IM_WIDTH, IM_HEIGHT, IM_CHANNELS)
-odim = 10
-hl_sizes = [3000,1000] # Fully Connected layers. Conv Layers are setup in the object initializer
-
-# Initialize model
-model = CNN(idim, odim, hl_sizes)
-# Train Model
-model.train(X_train,Y_train)
-
-[perc_correct_train, ytr_dump] = model.predict(X_train[0:200,:,:,:], y_train[0:200])
-[perc_correct_test,yt_dump] = model.predict(X_test[0:200], y_test[0:200])
-
-# Save Weights for Analysis
-model.save_tensor_weight(optional_string = "Mnist_Dataset")
-model.close()
-
-#Print Results
-print("Percent Correct for train set: ", perc_correct_train)
-print("Percent Correct for test set: ", perc_correct_test)
-#print("Predictions Train: ", ytr_dump)
-#print("Predictions Test: ", yt_dump)
-### End Code
-
-# Plot and Visualize Dataset
-for i in range(3):
-    plt.figure(i)
-    plt.title("Regular Image " + str(i) )
-    plt.imshow(np.reshape(X_train[i], (28,28)), cmap = 'gray')
-plt.show()
-
-'''
-
-# Apply a Guassian Filter
-gk = IK.get_gaussian_kernal((5,5), intensity = .05)
-for i in range(3):
-    plt.figure(i + 3)
-    plt.title("Gaussian Image " + str(i+3))
-    img_conv = sci.signal.convolve2d(images[i],gk, mode = 'same')
-    plt.imshow(img_conv, cmap = 'gray')
 
 
-# Apply Singular Value Decomposition to Image
-for i in range(3):
-    # Taking a singular value decomposition
-    [U,S,Vt] = np.linalg.svd(images[i])
-    t = np.array([i for i in range(len(S))])
-    keep_sing = 35
-    U = np.matrix(U[:,0:keep_sing])
-    S = np.matrix(np.diag(S[0:keep_sing]))
-    Vt = np.matrix(Vt[0:keep_sing,:])
-    plt.figure(i + 6)
-    plt.title("SVD Image " + str(i+6))
-    img_svd = np.array(U*S*Vt, dtype = np.int)
-    plt.imshow(img_svd, cmap = "gray")
-plt.show()
 
 
-# Apply Edge Detection:
-khorz = IK.get_horz_edge_kern()
-kvert = IK.get_vert_edge_kern()
-
-img = images[0]
-img = sci.signal.convolve2d(khorz,img, mode = 'same') 
-
-# Horizontal edge detection
-for i in range(3):
-    plt.figure(i + 9)
-    plt.title("Gaussian Image " + str(i+3))
-    img = images[i]
-    img = sci.signal.convolve2d(img,khorz, mode = 'same') 
-    plt.imshow(img, cmap = 'gray')
 
 
-# Vertical Edge Detetction
-for i in range(3):
-    plt.figure(i + 12)
-    plt.title("Gaussian Image " + str(i+3))
-    img = images[i]
-    img = sci.signal.convolve2d(img,kvert, mode = 'same') 
-    plt.imshow(img, cmap = 'gray')
 
-# Get image transform dictionary
-img_dic = get_image_transforms(images[0:100,:,:])
-'''    
+
+
+### test the mnsit ################
+def test_mnist():
+    #Image Properties
+    IM_WIDTH = 28
+    IM_HEIGHT = 28
+    IM_CHANNELS = 1
     
+    # Load in the CiFar-10 Dataset
+    #(X,y) = XL.get_cifar10(data_set = 3)
+    [X_train, y_train, X_test, y_test] = XL.get_mnist(norm = True)
+    
+    # Reshape the Y data
+    lb = LabelBinarizer()
+    Y_train = lb.fit_transform(y_train)
+    Y_test = lb.fit_transform(y_test)
+    #plt.imshow(X[1], cmap = 'gray')
+    
+    # I/O Network Parameters
+    idim = (IM_WIDTH, IM_HEIGHT, IM_CHANNELS)
+    odim = 10
+    hl_sizes = [3000,1000] # Fully Connected layers. Conv Layers are setup in the object initializer
+    
+    # Initialize model
+    model = CNN(idim, odim, hl_sizes)
+    # Train Model
+    model.train(X_train,Y_train)
+    
+    [perc_correct_train, ytr_dump] = model.predict(X_train[0:200,:,:,:], y_train[0:200])
+    [perc_correct_test,yt_dump] = model.predict(X_test[0:200], y_test[0:200])
+    
+    # Save Weights for Analysis
+    model.save_tensor_weight(optional_string = "Mnist_Dataset")
+    model.close()
+    
+    #Print Results
+    print("Percent Correct for train set: ", perc_correct_train)
+    print("Percent Correct for test set: ", perc_correct_test)
+    #print("Predictions Train: ", ytr_dump)
+    #print("Predictions Test: ", yt_dump)
+    ### End Code
+    
+    # Plot and Visualize Dataset
+    for i in range(3):
+        plt.figure(i)
+        plt.title("Regular Image " + str(i) )
+        plt.imshow(np.reshape(X_train[i], (28,28)), cmap = 'gray')
+    plt.show()
+
+
     
     
     

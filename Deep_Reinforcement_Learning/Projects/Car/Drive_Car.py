@@ -13,9 +13,12 @@ Created on Thu Oct 19 17:16:38 2017
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
 from XboxListener import XBoxListener
+#import TCPHost
 # Import Reinforcement learning Library
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Library\\ClientAirSimEnvironments")
 from ManualCarUnrealEnvironment import ManualCarUnrealEnvironment
+
+
 
 # Train the car to self drive -- SKEERTTTT!!!!!!!!!
 def drive_racing_car(env,
@@ -33,7 +36,8 @@ def drive_racing_car(env,
             # Sample action 
             xbox_controls = xbl.get()
             if xbox_controls is None:
-                _, _, DONE_FLAG, _ = env.step(action) # new single observation
+                _, obs4, DONE_FLAG, _ = env.step(action) # new single observation
+                #airHost.send(obs4)
             else:
                 if xbox_controls["LA"] == "ly":
                     action['throttle'] = 2*xbox_controls["LAV"]
@@ -52,7 +56,7 @@ def main():
     input_mode = "xbox"
     image_mask_FC_FR_FL = [True, True, True] # Full front 180 view
     action_duration = .025
-    sim_mode = "both_gray"
+    sim_mode = "both_rgb"
     IMG_HEIGHT = 128
     IMG_WIDTH = 128
     IMG_STEP = 1
@@ -64,6 +68,9 @@ def main():
                                         IMG_HEIGHT = IMG_HEIGHT,
                                         IMG_WIDTH = IMG_WIDTH,
                                         IMG_STEP = IMG_STEP)
+    
+    #airHost = TCPHost.TCPHost(host = "192.168.0.10", port = 5000, buff_size = 65536)
+    
     # Train the Vehicle
     print('Vehicle Ready!')
     drive_racing_car(UREnv)

@@ -4,17 +4,16 @@ Created on Sun Aug 26 17:51:21 2018
 
 @author: natsn
 """
-import sys
+import sys, os
 import numpy as np
 import time
 import multiprocessing 
 import threading
-
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Deep_Reinforcement_Learning\\Library")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..")
 import AirSimGUI
 from airsim import client
 from airsim.types import Vector3r
-sys.path.append("D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Util")
 from ImageProcessing import trim_append_state_vector
 
 
@@ -196,17 +195,22 @@ class ManualCarUnrealEnvironment:
         acc = (state['linear_acceleration']['x_val'],state['linear_acceleration']['y_val'],state['linear_acceleration']['z_val'])
         angVel = (state['angular_velocity']['x_val'],state['angular_velocity']['y_val'],state['angular_velocity']['z_val'])
         angAcc = (state['angular_acceleration']['x_val'],state['angular_acceleration']['y_val'],state['angular_acceleration']['z_val'])
-        
+        orien = (state['orientation']['x_val'],state['orientation']['y_val'],state['orientation']['z_val'], state['orientation']['w_val'])
+ 
         # Store the current state
-        self.current_inertial_state = np.array([pos[0] - self.initial_position[0], 
-                                                pos[1] - self.initial_position[1],
+        self.current_inertial_state = np.array([pos[0] - self.initial_position[0], # Pos
+                                                pos[1] - self.initial_position[1], # 
                                                 pos[2] - self.initial_position[2],
-                                                vel[0] - self.initial_velocity[0],
+                                                vel[0] - self.initial_velocity[0], # Vel
                                                 vel[1] - self.initial_velocity[1],
                                                 vel[2] - self.initial_velocity[2],
-                                                acc[0], acc[1], acc[2],
-                                                angVel[0], angVel[1], angVel[2],
-                                                angAcc[0], angAcc[1], angAcc[2]])
+                                                acc[0], acc[1], acc[2], # Acc
+                                                angVel[0], angVel[1], angVel[2], #acc
+                                                angAcc[0], angAcc[1], angAcc[2], #ang
+                                                orien[0], orien[1], orien[2], orien[3]]) # Quat
+    
+    
+    
         self.time_to_grab_states = time.time() - tic
         print('Time to grab states: ', self.time_to_grab_states)
         

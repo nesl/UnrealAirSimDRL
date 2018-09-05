@@ -7,13 +7,14 @@ Created on Sat Aug 18 10:55:37 2018
 
 import tkinter as tk
 from tkinter.ttk import Label, Frame, Entry, Notebook, Combobox
+import pygame
+import pygame.draw
+import pygame.time
 import threading 
 import multiprocessing
 import time
 import numpy as np
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Util")
-import ExcelLoader as XL
 import matplotlib
 matplotlib.use("TkAgg")
 from mpl_toolkits.mplot3d import  axes3d,Axes3D
@@ -21,6 +22,13 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib import cm
 from PIL import ImageTk, Image
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Util")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Util\\Virtual_IMU")
+from ponycube import Screen, Cube
+from euclid import *
+import ExcelLoader as XL
+
 
 class QuadcopterGUI(multiprocessing.Process):
     
@@ -203,8 +211,11 @@ class QuadcopterGUI(multiprocessing.Process):
         self.entry_reward.grid(row = 14, column = 3)
         self.entry_done.grid(row = 15, column = 3)
         
+        
+        
         # The Image Stramer From the simulator:
         self.VideoFeeds = [None for i in range(self.num_video_feeds)]
+        
         
         print("GUI Setup DONE!")
         t_upd = threading.Thread(target = self.updates)
@@ -271,10 +282,13 @@ class QuadcopterGUI(multiprocessing.Process):
         if not self.isRGB:
             scalar = 1
         sim_images = data
+        self.host.send(sim_images)
+        
         print("GUI Image Update:")
         start_time = time.time()
         for i in range(self.num_video_feeds):
             sim_image = sim_images[:,:,scalar*i:scalar*(i+1)]
+            
             if scalar == 1:
                 sim_image = np.reshape(sim_image, (sim_image.shape[0], sim_image.shape[1]))
             if ((i % 3) == 0):
@@ -358,9 +372,13 @@ class CarGUI(multiprocessing.Process):
         self.num_video_feeds = num_video_feeds
         self.isRGB = isRGB
         self.isNormal = isNormal
+        self.WIDTH = 580
+        self.HEIGHT = 500
         self.start()
     
     def run(self):
+        
+    # 1/2 Configure the Individual GUI Tabs    
         print("Start GUI Setup!")
         
         self.root = tk.Tk() # The GUI
@@ -368,18 +386,18 @@ class CarGUI(multiprocessing.Process):
         self.nb = Notebook(self.root)
         
         # Add Main Tab
-        self.StateFrame = Frame(self.nb) # Top of Gui 
+        self.StateFrame = Frame(self.nb, width = self.WIDTH, height = self.HEIGHT) # Top of Gui 
         self.nb.add(self.StateFrame, text = "Vehicle State")
         
         # Get Notebook Gridded
         self.nb.grid(row = 0, column = 0)
         
         # Configure Video Tab
-        self.VideoFrame = Frame(self.nb)
+        self.VideoFrame = Frame(self.nb, width = self.WIDTH, height = self.HEIGHT)
         self.nb.add(self.VideoFrame, text = "Video Feed")
         
         # Configure Plotting Tab
-        self.PlottingFrame = Frame(self.nb)
+        self.PlottingFrame = Frame(self.nb, width = self.WIDTH, height = self.HEIGHT)
         self.nb.add(self.PlottingFrame, text = "Graphics")
         self.fig = plt.figure(1, figsize= (4,4))
         self.ax = Axes3D(self.fig)
@@ -387,7 +405,22 @@ class CarGUI(multiprocessing.Process):
         self.canvas = FigureCanvasTkAgg(self.fig, self.PlottingFrame)
         self.canvas.get_tk_widget().grid(row = 1, column = 0)
         
+        # Configure Virtual IMU Tab:
+        self.embed = tk.Frame(self.root, width = self.WIDTH, height = self.HEIGHT)
+        self.nb.add(self.embed, text="Virtual IMU")
+        os.environ['SDL_WINDOWID'] = str(self.embed.winfo_id())  #Tell pygame's SDL window which window ID to use
+        # Start PYGAME for IMU Visualization
+        pygame.init()
+        self.screen = Screen(500,500,scale=1.5)
+        self.cube = Cube(40,30,60)
         
+        # END Initialization
+        self.root.update()
+        
+        
+        
+        
+    # 2/2 Configure the Labels and Entries on the GUI    
         # For Switch Vehicle Feeds
         self.current_vehicle_feed = tk.StringVar(self.StateFrame) # Linked to current vehicle choice
         self.switch_vehicle_feed = Combobox(self.StateFrame, textvariable = self.current_vehicle_feed)
@@ -533,6 +566,24 @@ class CarGUI(multiprocessing.Process):
         # The Image Stramer From the simulator:
         self.VideoFeeds = [None for i in range(self.num_video_feeds)]
         
+        
+        # Initialize the Vehicle's Virtual IMU Visualization
+        self.label_yaw = Label(self.embed, text = "Yaw:")
+        self.label_pitch = Label(self.embed, text = "Pitch:")
+        self.label_roll = Label(self.embed, text = "Roll:")
+        self.label_yaw.place(x=500,y = 0) # Place the Labels on the far right of the frame
+        self.label_pitch.place(x=500, y = 50)
+        self.label_roll.place(x=500, y = 100)
+        
+        self.entry_yaw = Entry(self.embed, text = "Yaw:")
+        self.entry_pitch = Entry(self.embed, text = "Pitch:")
+        self.entry_roll = Entry(self.embed, text = "Roll:")
+        self.entry_yaw.place(x = 500, y = 25)
+        self.entry_pitch.place(x = 500, y = 75)
+        self.entry_roll.place(x = 500, y = 125)
+        
+        
+        
         print("GUI Setup DONE!")
         t_upd = threading.Thread(target = self.updates)
         t_upd.start()
@@ -542,6 +593,7 @@ class CarGUI(multiprocessing.Process):
 
     
     def updates(self):
+        time.sleep(1.5)
         while True:
             # Data comes in as a dictionary of 'obs', 'state', 'meta'
             data = self.dataPipe.recv()
@@ -559,10 +611,15 @@ class CarGUI(multiprocessing.Process):
                                             args = (data[vehicle_name]['meta'],))
             self.t_meta.start()
             
+            self.t_v_imu_viz = threading.Thread(target = self.update_virtual_imu_visualization,
+                                                args = (data[vehicle_name]['state'],))
+            self.t_v_imu_viz.start()
+            
             # Join Threads
             self.t_states.join()
             self.t_imgs.join()
             self.t_meta.join()
+            self.t_v_imu_viz.join()
             
         
     def update_metas(self, data):
@@ -673,6 +730,43 @@ class CarGUI(multiprocessing.Process):
             print('GUI State Update Time! ', time.time() - start_time)        
              
 
+    def quat_to_euler(self, quatxyzw):
+        phi = np.arctan2(2*(quatxyzw[3]*quatxyzw[0] + quatxyzw[1]*quatxyzw[2]), 1 -2*(quatxyzw[1]**2 + quatxyzw[2]**2))
+        theta = np.arctan2(2*(quatxyzw[3]*quatxyzw[1] - quatxyzw[2]*quatxyzw[0]), 1)
+        phsi = np.arctan2(2*(quatxyzw[3]*quatxyzw[2] + quatxyzw[0]*quatxyzw[1]), 1 - 2*(quatxyzw[1]**2 + quatxyzw[2]**2))
+        return (phi, theta, phsi) # roll, pitch, yaw
+    
+    def update_virtual_imu_visualization(self, data):
+        #TKINTER setup
+        
+        # What if we wanted the real   imu
+        # imuListener/imuTCPClient.get control data -> gets data to do quats
+        
+        quatx = data[15]
+        quaty = data[16]
+        quatz = data[17]
+        quatw = data[18]
+        
+        # Convert Quaternions 
+        (roll, pitch, yaw) = self.quat_to_euler((quatx, quaty, quatz, quatw))
+        
+        print("Quaternions: ", quatx, quaty, quatz, quatw)
+
+        print("RPY: ", roll, pitch, yaw)
+        self.entry_yaw.delete(0,tk.END)
+        self.entry_yaw.insert(0, str(yaw))
+        self.entry_pitch.delete(0,tk.END)
+        self.entry_pitch.insert(0, str(pitch))
+        self.entry_roll.delete(0,tk.END)
+        self.entry_roll.insert(0, str(roll))
+        q = Quaternion(quatw, quatx, quaty, quatz).normalized()
+        self.cube.draw(self.screen,q)
+        event = pygame.event.poll()
+        pygame.display.flip()
+        pygame.time.delay(20) # ms
+        self.cube.erase(self.screen)
+        #TKINTER
+        self.root.update()
 
 
 

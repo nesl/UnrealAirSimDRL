@@ -10,6 +10,10 @@ import pickle
 import time
 
 
+class NeslROSClient(TCPClient):
+    def __init__(self):
+        
+
 class TCPClient:
     def __init__(self, host = "127.0.0.1",
                  port = 5000,

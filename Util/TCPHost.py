@@ -4,7 +4,7 @@ Created on Sun Aug 19 15:20:03 2018
 
 @author: natsn
 """
-
+import numpy as np
 import socket
 import threading
 import pickle
@@ -96,25 +96,26 @@ class TCPHost(threading.Thread):
     
 
 
-#
-#if __name__ == "__main__":
-#    sample_rate = .00025
-#    listen_for = 2
-#    host = TCPHost(buff_size = 1024, listen_for = listen_for)
-#    xbl = XboxListener.XBoxListener(sample_rate)
-#    xbl.init()
-#    
-#    while True:
-#        data = xbl.get()
-#        if data is not None:
-#            print('controls ', data)
-#            host.send(data)
-#        time.sleep(sample_rate)
-#        
-#        
-#        
-#        
-#        
-#        
+
+if __name__ == "__main__":
+    sample_rate = .00025
+    listen_for = 1
+    host = TCPHost(buff_size = 1024, listen_for = listen_for)
+    xbl = XboxListener.XBoxListener(sample_rate)
+    xbl.init()
+    
+    while True:
+        #data = xbl.get()
+        data = np.random.rand() * 255
+        if data is not None:
+            print('controls ', data)
+            host.send(data)
+        time.sleep(sample_rate)
+        
+        
+        
+        
+        
+        
         
         
