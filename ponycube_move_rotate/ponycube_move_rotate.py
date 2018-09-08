@@ -9,6 +9,8 @@ import pygame.time
 from math import sin, cos, acos
 from euclid import *
 
+#import IMUTCPClient
+
 class Screen (object):
     def __init__(self,x=320,y=280,scale=1):
         self.i = pygame.display.set_mode((x,y))
@@ -26,11 +28,13 @@ class Screen (object):
         assert isinstance(v,Vector3)
         return v.z
 
-class PrespectiveScreen(Screen):
+class PerspectiveScreen(Screen):
     # the xy projection and depth functions are really an orthonormal space
     # but here i just approximated it with decimals to keep it quick n dirty
     def project(self,v):
         assert isinstance(v,Vector3)
+        # x = ((v.x*0.957) + (v.z*0.287)) * self.scale + self.originx
+        # y = ((v.y*0.957) + (v.z*0.287)) * self.scale + self.originy
         x = ((v.x*0.957) + (v.z*0.287)) * self.scale + self.originx
         y = ((v.y*0.957) + (v.z*0.287)) * self.scale + self.originy
         return (x,y)
@@ -175,50 +179,145 @@ class Cube (object):
   
 
 
-
+# y axis should be minus
 class Grid(object):
     def __init__(self):
-        self.grid_pts_x_nega = [Vector3(-100,-100,-100), Vector3(-50,-100,-100),Vector3(0,-100,-100), Vector3(50,-100,-100), Vector3(100,-100,-100)]
-        self.grid_pts_x_posi = [Vector3(-100,100,-100), Vector3(-50,100,-100), Vector3(0,100,-100), Vector3(50,100,-100), Vector3(100,100,-100)]
-        self.grid_pts_y_nega = [Vector3(-100,-50,-100),Vector3(-100,0,-100), Vector3(-100,50,-100)]
-        self.grid_pts_y_posi = [Vector3(100,-50,-100), Vector3(100,0,-100), Vector3(100,50,-100)]
+        self.origin = Vector3(0,0,0)
+        self.grid_pts_x_axis = [Vector3(25,0,0), Vector3(50,0,0), Vector3(75,0,0), Vector3(100,0,0)]
+        self.grid_pts_y_axis = [Vector3(0,-25,0), Vector3(0,-50,0), Vector3(0,-75,0), Vector3(0,-100,0)]
+        self.grid_pts_z_axis = [Vector3(0,0,25), Vector3(0,0,50), Vector3(0,0,75), Vector3(0,0,100)]
+        self.grid_pts_x_xy = [v+Vector3(0,-100,0) for v in self.grid_pts_x_axis]        
+        self.grid_pts_x_xz = [v+Vector3(0,0,100) for v in self.grid_pts_x_axis]
+        self.grid_pts_y_yx = [v+Vector3(100,0,0) for v in self.grid_pts_y_axis]
+        self.grid_pts_y_yz = [v+Vector3(0,0,100) for v in self.grid_pts_y_axis]
+        self.grid_pts_z_zx = [v+Vector3(100,0,0) for v in self.grid_pts_z_axis]
+        self.grid_pts_z_zy = [v+Vector3(0,-100,0) for v in self.grid_pts_z_axis]
+        
 
     def lines(self):
         ec         = (0,0,0) # color
-        xn = self.grid_pts_x_nega
-        xp = self.grid_pts_x_posi
-        yn = self.grid_pts_y_nega
-        yp = self.grid_pts_y_posi
+        x = self.grid_pts_x_axis
+        y = self.grid_pts_y_axis
+        z = self.grid_pts_z_axis
+        x_xy = self.grid_pts_x_xy
+        x_xz = self.grid_pts_x_xz
+        y_yx = self.grid_pts_y_yx
+        y_yz = self.grid_pts_y_yz
+        z_zx = self.grid_pts_z_zx
+        z_zy = self.grid_pts_z_zy
 
-        lines = [ Edge(xn[0],xp[0],ec), Edge(xn[1],xp[1],ec), Edge(xn[2],xp[2],ec), Edge(xn[3],xp[3],ec), Edge(xn[4],xp[4],ec), 
-                  Edge(xn[0],xn[4],ec), Edge(xp[0],xp[4],ec), 
-                  Edge(yn[0],yp[0],ec), Edge(yn[1],yp[1],ec), Edge(yn[2],yp[2],ec)]
-                
-        return lines
+        axes = [ Edge(self.origin,x[-1],ec), Edge(self.origin,y[-1],ec), Edge(self.origin,z[-1],ec)]
+        lines = []
+        for i in range(len(x)):
+            lines.append(Edge(x[i],x_xy[i],ec))
+            lines.append(Edge(x[i],x_xz[i],ec))
+            lines.append(Edge(y[i],y_yx[i],ec))
+            lines.append(Edge(y[i],y_yz[i],ec))
+            lines.append(Edge(z[i],z_zx[i],ec))
+            lines.append(Edge(z[i],z_zy[i],ec))
+                       
+        
+        return axes + lines
 
     def draw(self,screen):
         drawables = self.lines()
         drawables.sort(key=lambda s: screen.depth(s.centroid()))
         [ s.draw(screen) for s in drawables ]
 
-if __name__ == "__main__":
-    pygame.init()
-    screen = Screen(480,400,scale=1.5)
-    cube = Cube(4,4,4)
-    grid = Grid()
-    q = Quaternion(1,0,0,0)
-    incr = Quaternion(0.96,0.01,0.01,0).normalized()
-    count = 0
 
-    while 1:
-        q = q * incr * incr * incr
-        cube.draw(screen,q,Vector3(count,count,count))
-        #grid.draw(screen)
-        event = pygame.event.poll()
-        if event.type == pygame.QUIT \
-            or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-            break
-        pygame.display.flip()
-        pygame.time.delay(200) 
-        cube.erase(screen)
-        count+=1
+
+class PygameImuGui(object):
+
+    def __init__(self,
+                 is2D = False,
+                 isGrid = True,
+                 screensize = [480, 400],
+                 control_input = 'test',     #'ue'/'xbox'/'test'
+                 cubeMass = 2,
+                 cubeInertial = 0.5,
+                 cubeSize = [10,10,10]):
+
+        self.is2D = is2D
+        self.isGrid = isGrid
+        self.screensize = screensize
+        self.control_input = control_input
+        self.cubeMass = cubeMass
+        self.cubeInertial = cubeInertial
+        self.cubeSize = cubeSize
+
+    def run(self):
+        pygame.init()
+
+        if self.is2D:
+            screen = Screen(self.screensize[0],self.screensize[1],scale=1.5)
+        else:
+            screen = PerspectiveScreen(self.screensize[0],self.screensize[1],scale=1.5)
+
+        cube = Cube(self.cubeSize[0],self.cubeSize[1],self.cubeSize[2])
+        grid = Grid()
+
+        if self.control_input == 'test':
+            q = Quaternion(1,0,0,0)
+            incr = Quaternion(0.96,0.01,0.01,0).normalized()
+            count = 0
+
+            while 1:
+                q = q * incr * incr * incr
+                if self.isGrid:
+                    grid.draw(screen)
+                cube.draw(screen,q,Vector3(count,-count,count))       
+                event = pygame.event.poll()
+                if event.type == pygame.QUIT \
+                    or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                    break
+                pygame.display.flip()
+                pygame.time.delay(100) 
+                cube.erase(screen)
+                count+=1
+
+        elif self.control_input == 'ue':
+            # while True:
+            #     q = 
+            #     posi =   #Vector3
+               
+            #     if isGrid:
+            #         grid.draw(screen)
+            #     cube.draw(screen,q,posi)       
+            #     event = pygame.event.poll()
+            #     if event.type == pygame.QUIT \
+            #         or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            #         break
+            #     pygame.display.flip()
+            #     pygame.time.delay(100) 
+            #     cube.erase(screen)
+
+            pass
+        
+
+        elif self.control_input == 'imu':
+            imuc = IMUTCPClient.IMUTCPClient()
+            while True:
+                control = imuc.recv_imu_update()
+                if control is not None:
+                    q = Quaternion(control["quatW"], control["quatX"], control["quatY"], control["quatZ"]).normalized()
+                    posi = Vector3(0,0,0)
+               
+                    if self.isGrid:
+                        grid.draw(screen)
+                    cube.draw(screen,q,posi)       
+                    event = pygame.event.poll()
+                    if event.type == pygame.QUIT \
+                        or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                        break
+                    pygame.display.flip()
+                    pygame.time.delay(100) 
+                    cube.erase(screen)
+            
+
+        else:
+            print('invalid control input!')
+      
+
+if __name__ == "__main__":
+    gui = PygameImuGui()
+    gui.run()

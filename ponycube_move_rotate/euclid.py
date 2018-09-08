@@ -20,7 +20,6 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 '''euclid graphics maths module
-
 Documentation and tests are included in the file "euclid.txt", or online
 at http://code.google.com/p/pyeuclid
 '''
@@ -2324,4 +2323,5 @@ class Plane:
 
     def _connect_plane(self, other):
         return _connect_plane_plane(other, self)
+
 
