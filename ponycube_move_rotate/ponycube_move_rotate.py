@@ -181,17 +181,27 @@ class Cube (object):
 
 # y axis should be minus
 class Grid(object):
-    def __init__(self):
+    def __init__(self, node_num=5, gap=20):
+        self.node_num = node_num
+        self.gap = gap
+
+
         self.origin = Vector3(0,0,0)
-        self.grid_pts_x_axis = [Vector3(25,0,0), Vector3(50,0,0), Vector3(75,0,0), Vector3(100,0,0)]
-        self.grid_pts_y_axis = [Vector3(0,-25,0), Vector3(0,-50,0), Vector3(0,-75,0), Vector3(0,-100,0)]
-        self.grid_pts_z_axis = [Vector3(0,0,25), Vector3(0,0,50), Vector3(0,0,75), Vector3(0,0,100)]
-        self.grid_pts_x_xy = [v+Vector3(0,-100,0) for v in self.grid_pts_x_axis]        
-        self.grid_pts_x_xz = [v+Vector3(0,0,100) for v in self.grid_pts_x_axis]
-        self.grid_pts_y_yx = [v+Vector3(100,0,0) for v in self.grid_pts_y_axis]
-        self.grid_pts_y_yz = [v+Vector3(0,0,100) for v in self.grid_pts_y_axis]
-        self.grid_pts_z_zx = [v+Vector3(100,0,0) for v in self.grid_pts_z_axis]
-        self.grid_pts_z_zy = [v+Vector3(0,-100,0) for v in self.grid_pts_z_axis]
+        self.grid_pts_x_axis = []
+        self.grid_pts_y_axis = []
+        self.grid_pts_z_axis = []
+
+        for i in range(self.node_num):
+            self.grid_pts_x_axis.append(Vector3((i+1)*self.gap, 0, 0))
+            self.grid_pts_y_axis.append(Vector3(0, -(i+1)*self.gap, 0))
+            self.grid_pts_z_axis.append(Vector3(0, 0, (i+1)*self.gap))
+
+        self.grid_pts_x_xy = [v+Vector3(0, -self.node_num*self.gap, 0) for v in self.grid_pts_x_axis]        
+        self.grid_pts_x_xz = [v+Vector3(0, 0, self.node_num*self.gap) for v in self.grid_pts_x_axis]
+        self.grid_pts_y_yx = [v+Vector3(self.node_num*self.gap, 0, 0) for v in self.grid_pts_y_axis]
+        self.grid_pts_y_yz = [v+Vector3(0, 0, self.node_num*self.gap) for v in self.grid_pts_y_axis]
+        self.grid_pts_z_zx = [v+Vector3(self.node_num*self.gap, 0, 0) for v in self.grid_pts_z_axis]
+        self.grid_pts_z_zy = [v+Vector3(0, -self.node_num*self.gap, 0) for v in self.grid_pts_z_axis]
         
 
     def lines(self):
@@ -235,7 +245,10 @@ class PygameImuGui(object):
                  control_input = 'test',     #'ue'/'xbox'/'test'
                  cubeMass = 2,
                  cubeInertial = 0.5,
-                 cubeSize = [10,10,10]):
+                 cubeSize = [10,10,10],
+                 node_num = 5,
+                 gap = 20,
+                 relative_posi = Vector3(0,0,0)):
 
         self.is2D = is2D
         self.isGrid = isGrid
@@ -244,6 +257,9 @@ class PygameImuGui(object):
         self.cubeMass = cubeMass
         self.cubeInertial = cubeInertial
         self.cubeSize = cubeSize
+        self.node_num = node_num
+        self.gap = gap
+        self.relative_posi = relative_posi
 
     def run(self):
         pygame.init()
@@ -254,7 +270,7 @@ class PygameImuGui(object):
             screen = PerspectiveScreen(self.screensize[0],self.screensize[1],scale=1.5)
 
         cube = Cube(self.cubeSize[0],self.cubeSize[1],self.cubeSize[2])
-        grid = Grid()
+        grid = Grid(self.node_num, self.gap)
 
         if self.control_input == 'test':
             q = Quaternion(1,0,0,0)
@@ -319,5 +335,5 @@ class PygameImuGui(object):
       
 
 if __name__ == "__main__":
-    gui = PygameImuGui()
+    gui = PygameImuGui(node_num = 10, gap = 10)
     gui.run()
