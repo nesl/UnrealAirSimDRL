@@ -12,12 +12,14 @@ from euclid import *
 #import IMUTCPClient
 
 class Screen (object):
-    def __init__(self,x=320,y=280,scale=1):
+    def __init__(self,x=320,y=280,scale=1,x_proj_angle=0,y_proj_angle=0):  #angle in degree
         self.i = pygame.display.set_mode((x,y))
         self.i.fill([255,255,255])
         self.originx = self.i.get_width() / 2
         self.originy = self.i.get_height() / 2
         self.scale = scale
+        self.x_proj_angle_rad = x_proj_angle*3.1415926/180.0      
+        self.y_proj_angle_rad = y_proj_angle*3.1415926/180.0
 
     def project(self,v):
         assert isinstance(v,Vector3)
@@ -35,9 +37,10 @@ class PerspectiveScreen(Screen):
         assert isinstance(v,Vector3)
         # x = ((v.x*0.957) + (v.z*0.287)) * self.scale + self.originx
         # y = ((v.y*0.957) + (v.z*0.287)) * self.scale + self.originy
-        x = ((v.x*0.957) + (v.z*0.287)) * self.scale + self.originx
-        y = ((v.y*0.957) + (v.z*0.287)) * self.scale + self.originy
+        x = ((v.x*math.cos(self.x_proj_angle_rad)) + (v.z*math.sin(self.x_proj_angle_rad)))* self.scale + self.originx
+        y = ((v.y*math.cos(self.y_proj_angle_rad)) + (v.z*math.sin(self.y_proj_angle_rad))) * self.scale + self.originy
         return (x,y)
+
     def depth(self,v):
         assert isinstance(v,Vector3)
         z = (v.z*0.9205) - (v.x*0.276) - (v.y*0.276)
@@ -248,7 +251,9 @@ class PygameImuGui(object):
                  cubeSize = [10,10,10],
                  node_num = 5,
                  gap = 20,
-                 relative_posi = Vector3(0,0,0)):
+                 relative_posi = Vector3(0,0,0),
+                 x_proj_angle = 30,
+                 y_proj_angle = 15):
 
         self.is2D = is2D
         self.isGrid = isGrid
@@ -260,14 +265,20 @@ class PygameImuGui(object):
         self.node_num = node_num
         self.gap = gap
         self.relative_posi = relative_posi
+        self.x_proj_angle = x_proj_angle
+        self.y_proj_angle = y_proj_angle
 
-    def run(self):
+    def run(self,dym_flag=False,x_proj_angle_dym=0,y_proj_angle_dym=0):
         pygame.init()
+        
+        if dym_flag:
+            self.x_proj_angle = x_proj_angle_dym
+            self.y_proj_angle = y_proj_angle_dym
 
         if self.is2D:
             screen = Screen(self.screensize[0],self.screensize[1],scale=1.5)
         else:
-            screen = PerspectiveScreen(self.screensize[0],self.screensize[1],scale=1.5)
+            screen = PerspectiveScreen(self.screensize[0],self.screensize[1],1.5,self.x_proj_angle,self.y_proj_angle)
 
         cube = Cube(self.cubeSize[0],self.cubeSize[1],self.cubeSize[2])
         grid = Grid(self.node_num, self.gap)
@@ -385,10 +396,10 @@ class PlaceCube(object):
 
 
 if __name__ == "__main__":
-    # gui = PygameImuGui(node_num = 10, gap = 10)
-    # gui.run()
-    placecube = PlaceCube([5,5,5])
-    placecube.run()
+    gui = PygameImuGui(node_num = 10, gap = 10, x_proj_angle = 225)
+    gui.run(dym_flag=True,x_proj_angle_dym=30,y_proj_angle_dym=30)
+    # placecube = PlaceCube([5,5,5])
+    # placecube.run()
 
 
 
