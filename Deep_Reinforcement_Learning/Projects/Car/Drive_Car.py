@@ -11,20 +11,19 @@ Created on Thu Oct 19 17:16:38 2017
 
 # Import Essentials
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\..\\Util")
+sys.path.append(os.path.dirname(os.path.abspath("__file__")) + "\\..\\..\\..\\Util")
 from XboxListener import XBoxListener
 #import TCPHost
 # Import Reinforcement learning Library
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Library\\ClientAirSimEnvironments")
+sys.path.append(os.path.dirname(os.path.abspath("__file__")) + "\\..\\..\\Library\\ClientAirSimEnvironments")
 from ManualCarUnrealEnvironment import ManualCarUnrealEnvironment
-
 
 
 # Train the car to self drive -- SKEERTTTT!!!!!!!!!
 def drive_racing_car(env,
                      NUM_EPISODES = 1000):
     print("Xbox On!")
-    xbl = XBoxListener(.025)
+    xbl = XBoxListener(.025) 
     xbl.init()
     for episode in range(NUM_EPISODES):
         print('Reset racing!', "Episode: ", episode)
@@ -46,14 +45,11 @@ def drive_racing_car(env,
                     action['steering'] = 2*xbox_controls["LAV"]
                 elif xbox_controls["LA"] == "rt":
                     action['brake'] = xbox_controls["LAV"]
-                    # Update Stacked State
-                    _, _, DONE_FLAG, _ = env.step(action) # new single observation
+                _, _, DONE_FLAG, _ = env.step(action) # new single observation
             
             
-def main():
-    
+def main():    
     vehicle_name = "Car1"
-    input_mode = "xbox"
     image_mask_FC_FR_FL = [True, True, True] # Full front 180 view
     action_duration = .025
     sim_mode = "both_rgb"
@@ -61,7 +57,6 @@ def main():
     IMG_WIDTH = 128
     IMG_STEP = 1
     UREnv = ManualCarUnrealEnvironment(vehicle_name = vehicle_name,
-                                        input_mode = input_mode,
                                         action_duration = action_duration,
                                         image_mask_FC_FR_FL = image_mask_FC_FR_FL,
                                         sim_mode = sim_mode,
@@ -77,3 +72,19 @@ def main():
     
 if __name__ == '__main__':
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

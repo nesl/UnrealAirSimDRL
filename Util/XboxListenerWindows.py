@@ -27,7 +27,7 @@ import queue
 
 
 class XboxQ:
-    def __init__(self, buff_size = 5):
+    def __init__(self, buff_size = 10):
         self.xboxq = queue.Queue()
         self.buff_size = buff_size
     def put(self, boxInput):
@@ -437,12 +437,12 @@ def sample_first_joystick(dt):
         
         
 class XBoxListener(threading.Thread):
-    def __init__(self, sample_rate, verbose = False): # in seconds
+    def __init__(self, sample_rate):
         threading.Thread.__init__(self)
         #self.run = sample_first_joystick
         self.sample_rate = sample_rate
         self.time_start = time.time()
-        self.verbose = verbose
+        
     def init(self):
         self.time_start = time.time()
         self.now = None
@@ -458,11 +458,8 @@ class XBoxListener(threading.Thread):
         #global LAST_BUTTON, LAST_BUTTON_IS_PRESSED, LAST_AXIS, LAST_AXIS_VALUE
         global xboxq
         self.now = time.time() - self.time_start
-        data = xboxq.get()
-        if self.verbose:
-            print("Xbox Data: ", data)
-        return data
-        
+        return xboxq.get()
+        #self.xboxq.put(xboxInput)
 
 
 #################################
@@ -473,4 +470,4 @@ class XBoxListener(threading.Thread):
 #        print(xbl.get())
 #        time.sleep(.02)
 #        
-    
+#    

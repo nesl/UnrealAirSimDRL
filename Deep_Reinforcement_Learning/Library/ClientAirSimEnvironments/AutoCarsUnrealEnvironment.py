@@ -14,7 +14,7 @@ from airsim import client
 from airsim.types import Vector3r, Quaternionr
 import sys
 from ImageProcessing import trim_append_state_vector
-
+from RewardingFunctions import car_racing_rewarding_function
 
 
 

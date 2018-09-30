@@ -25,7 +25,7 @@ from PIL import ImageTk, Image
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Util")
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Util\\Virtual_IMU")
-from ponycube import Screen, Cube
+from EuclidObjects import Screen, Cube
 from euclid import *
 import ExcelLoader as XL
 
@@ -45,7 +45,7 @@ class QuadcopterGUI(multiprocessing.Process):
         print("Start GUI Setup!")
         
         self.root = tk.Tk() # The GUI
-        self.root.title("Quadcopter Unreal GUI")
+        self.root.title("Car Unreal GUI")
         self.nb = Notebook(self.root)
         
         # Add Main Tab
@@ -374,6 +374,7 @@ class CarGUI(multiprocessing.Process):
         self.isNormal = isNormal
         self.WIDTH = 580
         self.HEIGHT = 500
+        self.viz_3d_counter = 0
         self.start()
     
     def run(self):
@@ -398,10 +399,13 @@ class CarGUI(multiprocessing.Process):
         
         # Configure Plotting Tab
         self.PlottingFrame = Frame(self.nb, width = self.WIDTH, height = self.HEIGHT)
-        self.nb.add(self.PlottingFrame, text = "Graphics")
+        self.nb.add(self.PlottingFrame, text = "Track n' Map")
         self.fig = plt.figure(1, figsize= (4,4))
         self.ax = Axes3D(self.fig)
-        self.ax.scatter(np.random.rand(10),np.random.rand(10),np.random.rand(10))
+        self.last_3d_viz_x_pos = 0
+        self.last_3d_viz_y_pos = 0
+        self.last_3d_viz_z_pos = 0
+        self.ax.scatter(self.last_3d_viz_x_pos,self.last_3d_viz_y_pos,self.last_3d_viz_z_pos)
         self.canvas = FigureCanvasTkAgg(self.fig, self.PlottingFrame)
         self.canvas.get_tk_widget().grid(row = 1, column = 0)
         
@@ -615,11 +619,16 @@ class CarGUI(multiprocessing.Process):
                                                 args = (data[vehicle_name]['state'],))
             self.t_v_imu_viz.start()
             
+            self.t_3d_track_viz = threading.Thread(target = self.update_object_3DVisualization, 
+                                                   args = (data[vehicle_name]['state'],))
+            self.t_3d_track_viz.start()
+            
             # Join Threads
             self.t_states.join()
             self.t_imgs.join()
             self.t_meta.join()
             self.t_v_imu_viz.join()
+            self.t_3d_track_viz.join()
             
         
     def update_metas(self, data):
@@ -741,7 +750,6 @@ class CarGUI(multiprocessing.Process):
         
         # What if we wanted the real   imu
         # imuListener/imuTCPClient.get control data -> gets data to do quats
-        
         quatx = data[15]
         quaty = data[16]
         quatz = data[17]
@@ -763,12 +771,57 @@ class CarGUI(multiprocessing.Process):
         self.cube.draw(self.screen,q)
         event = pygame.event.poll()
         pygame.display.flip()
-        pygame.time.delay(20) # ms
+        pygame.time.delay(10) # ms
         self.cube.erase(self.screen)
         #TKINTER
         self.root.update()
 
-
+    def update_object_3DVisualization(self, data):
+        if self.viz_3d_counter % 20 == 0:
+            print("RUNNING 3D VISULIZATION")
+            print(data[0], data[1], data[2])
+            xpos = data[0]
+            ypos = data[1]
+            zpos = data[2]
+            self.ax.plot3D([self.last_3d_viz_x_pos, xpos],
+                           [self.last_3d_viz_y_pos,ypos],
+                           zs = [self.last_3d_viz_z_pos, zpos])
+            self.ax.scatter(xpos, ypos, zpos, color = 'green')
+            self.canvas.draw()
+            self.last_3d_viz_x_pos = xpos
+            self.last_3d_viz_y_pos = ypos
+            self.last_3d_viz_z_pos = zpos
+        self.viz_3d_counter = self.viz_3d_counter + 1
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
 
 
