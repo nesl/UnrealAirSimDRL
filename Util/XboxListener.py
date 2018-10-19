@@ -13,6 +13,7 @@ Only req is Pyglet 1.2alpha1 or higher:
 pip install --upgrade http://pyglet.googlecode.com/archive/tip.zip 
 """
 
+
 import ctypes
 import os
 import sys

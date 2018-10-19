@@ -13,6 +13,8 @@ Only req is Pyglet 1.2alpha1 or higher:
 pip install --upgrade http://pyglet.googlecode.com/archive/tip.zip 
 """
 
+#IF XBOX CONTROLLER DOES NOT CONNECT : SUDO MODPROBE XPAD
+#RUN PYTHON AS SUDO 
 #import ctypes
 import os
 import sys
@@ -46,7 +48,7 @@ class XboxQ:
             return self.xboxq.get()
 
 def fmtFloat(n):
-    return '{:6.3f}'.format(n)
+    return '{:6.6f}'.format(n)
 
 # Globals
 keys = ["leftX","leftY","rightX", "rightY", "A", "B", "X", "Y", 

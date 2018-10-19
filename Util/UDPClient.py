@@ -4,7 +4,7 @@ Created on Sun Aug 19 16:52:16 2018
 
 @author: natsn
 """
-
+import os, sys
 import socket
 import pickle 
 import time
@@ -15,61 +15,49 @@ import time
 # We can send arrays, dicts, strings, anything.
 # We pickle before sending
 class UDPClient:
-    def __init__(self, server,
-                 host = "127.0.0.1",
-                 port = 5001,
-                 buff_size = 1024):
-        self.server = server
+    def __init__(self,
+                host = "127.0.0.1",
+                port = 5000,
+                buff_size = 5000):
         self.host = host # Local host almost always uses this IP address
         self.port = port
         self.buff_size = buff_size
         self.s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM) # internal socket object
-        self.s.bind((host, port)) # Bind the port to the local host
-        print("Client Started")
-        self.addr = None
+        #self.s.bind((host, port)) # Bind the port to the local host
+        #self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
     def recv(self):
         data, self.addr = self.s.recvfrom(self.buff_size)
-        return self.run(pickle.loads(data))
-    
-    def run(self, data):
-        if not data: # is None
-            #print("Got No Data!")
-            return None
-        
-        print("From Host ", data)
-        #data = str(data).upper()
-        return data
+        return pickle.loads(data)
     
     def send(self, data):
-        self.s.sendto(pickle.dumps(data), self.server) # Goes first to give the server its address
+        self.s.sendto(pickle.dumps(data), (self.host, self.port)) # Goes first to give the server its address
     
     def close(self):
         self.s.close()
     
     
+def main():
+    UDP_IP = "127.0.0.1"
+    UDP_PORT = 5006
+    client = UDPClient(UDP_IP, UDP_PORT, buff_size=1024)
+    print("Start UDP Client!")
+    while True:
+        data = client.recv()
+        if data is not None:
+            print("Xbox Controls: ", data)
+        time.sleep(.00035)
+
 
 if __name__ == "__main__":
-    server = ("127.0.0.1", 5000)
-    unlocked = False
-    client = UDPClient(server, buff_size = 1024)
-    data = input("Enter ''start'' to turn xbox listener on")
-    while True:
-        if not unlocked:
-            data = input("Enter ''start'' to turn xbox listener on")
-            client.send(data)
-            data = client.recv()
-            if data != "wrong":
-                unlocked = True
-            else:
-                print("Incorrect key, re-enter")
-        
-        if unlocked:
-            data = client.recv()
-            if data is not None:
-                print("Xbox Controls: ", data)
-            time.sleep(.00035)
-    
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('Interrupted')
+        try:
+            sys.exit(0)
+        except SystemExit:
+            os._exit(0)
     
     
     

@@ -97,6 +97,7 @@ class XboxControllerTCPHost(TCPHost.TCPHost):
                 self.format_controls_linux(controls)
             else:
                 self.format_controls_windows(controls)
+            # CSV Write
             if len(self.control_dic[self.control_labels[0]]) > self.write_after:
                 self.fWriter.write_csv(self.control_dic)
                 self.control_dic = dict.fromkeys(self.control_labels, [])
