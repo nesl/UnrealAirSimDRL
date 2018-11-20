@@ -110,9 +110,11 @@ def quaternion_to_rotation_matrix(quat):
     rot_mat =  np.matrix(np.array([[quat[0]**2 + quat[1]**2 - quat[2]**2 - quat[3]**2,
                2*(quat[1]*quat[2] - quat[0]*quat[3]),
                2*(quat[0]*quat[2] + quat[1]*quat[3])],
+
                [2*(quat[1]*quat[2] + quat[0]*quat[3]),
                quat[0]**2 - quat[1]**2 + quat[2]**2 - quat[3]**2,
                2*(quat[2]*quat[3] - quat[0]*quat[1])],
+               
                [2*(quat[1]*quat[3] - quat[0]*quat[2]),
                2*(quat[0]*quat[1] + quat[2]*quat[3]),
                quat[0]**2 - quat[1]**2 - quat[2]**2 + quat[3]**2]]))
@@ -206,6 +208,12 @@ def rotate_vectors_ypr_per_axis(vectors, frame, ypr):
                                             frame[0], frame[1], frame[2])
         frames.append(frame)
     return vectors, frames
+
+def get_omega_matrix(wx,wy,wz):
+    return np.matrix([[0,-wx,-wy,-wz],
+                    [wx,0,wz,-wy],
+                    [wy,-wz,0,wx],
+                    [wz,wy,-wx,0]])
 
 
 def generate_vector_circle(vector, rot_axis, num_vects):

@@ -17,7 +17,7 @@ import pickle
 import time
 import os, sys
 import XboxListenerLinux
-
+import numpy as np
 lock = threading.Lock()
 # Host: Binds to internal server, specifiy a port or keep default.
 # Need to update run -- should run the specific Publishers message receive / transmit routine
@@ -133,15 +133,15 @@ class PublisherTCP:
     def __init__(self, host="127.0.0.1",
                 port=5000,
                 BUFF_SIZE=1024,
-                QUEUE_SIZE = 15,
-                MAX_SUBS=1,
+                QUEUE_SIZE = 100,
+                MAX_SUBSCRIPTIONS=1,
                 service_func = None):
 
         self.host = host  # Local host almost always uses this IP address
         self.port = port
         self.c = None
         self.addr = None
-        self.MAX_SUBS = MAX_SUBS
+        self.MAX_SUBSCRIPTIONS = MAX_SUBSCRIPTIONS
         self.QUEUE_SIZE = QUEUE_SIZE
         self.current_client_count = 0
         self.newest_client_id = 0
@@ -151,7 +151,7 @@ class PublisherTCP:
 
         # internal socket object
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.listen(self.MAX_SUBS)  # Listen for 1 connection at a time
+        # Listen for 1 connection at a time
         self.s.bind((host, port))  # Bind the port to the local host
         self.poll_thread = threading.Thread(target=self._poll_for_clients)
         print("TCP Host Server Started")
@@ -171,49 +171,48 @@ class PublisherTCP:
         self.serviceTypes = ['data', 'routine']
         self.serviceCmds = ['ack', 'nack', 'resend']
         self.poll_thread.start()
-        print("TCP Host Messaging Setup!")
+        print("TCP Host Messaging Setup All Done!")
 
     def _poll_for_clients(self):
-        while self.current_client_count <= self.MAX_SUBS:
+        self.s.listen(self.MAX_SUBSCRIPTIONS)
+        while self.current_client_count <= self.MAX_SUBSCRIPTIONS:
             print("Initializing Clients..")
-            try:
-                c, addr = self.s.accept()
-                print("Start connection from new client")
-                if self._check_add_addr_conn(c, addr):
-                    # set up subscription keys
-                    self.current_client_count += 1
-                    self.newest_client_id += 1
-                    self.client_id_tags[self.newest_client_id] = self.current_client_count
-                    # setup channel
-                    print("Adding connection", (c,addr))
-                    self._msg_setup(c, addr)
-                    print("Initialized ", self.current_client_count,
-                        "/", self.MAX_SUBS, " Connections: ")
-                    print("Connections Initialized!: ", c, addr)
-                    print("Looking for new connections : ")
-                    time.sleep(.5)
-            except Exception:
-                print('Something wrong with stream of info')
+            #try:
+            c, addr = self.s.accept()
+            print("Found connection from new client")
+            if self._check_add_addr_conn(c, addr):
+                # setup channel
+                print("Adding connection", (c,addr))
+                self._msg_setup(c, addr)
+                print("Initialized ", self.current_client_count,
+                        "/", self.MAX_SUBSCRIPTIONS, " Connections: ")
+                print("Connections Initialized!: ", c, addr)
+                print("Looking for new connections : ")
+                time.sleep(.5)
+            #except Exception:
+            #    print('Something wrong with stream of info')
 
     def _msg_setup(self, c, addr):
         msg_queue = queue.Queue(self.QUEUE_SIZE)
         # See what type of message service they want:
-        print("")
         service_choice = pickle.loads(c.recv(self.BUFF_SIZE))
+        print("Subscriber Mode Selection: ", service_choice)
         if service_choice == self.SUBSCRIPTION_TYPES[0]:
             # Do Sub -- Thread of data from Pub to Sub
             client_id = self.newest_client_id
             subscription = (self.SUBSCRIPTION_TYPES[0], c, addr, msg_queue)
             self.message_subscriptions[client_id] = subscription
-            msg_sub_thread = threading.Thread(target = self._msg_pub, args=(client_id))
+            print("New Initialized Subscription packet: ", subscription)
+            msg_sub_thread = threading.Thread(target = self._msg_pub, args=(client_id,))
             self.open_message_threads[client_id] = msg_sub_thread
+            print("Starting Publish to ", (c, addr), "Sub Nums:", self.current_client_count, self.client_id_tags)
             msg_sub_thread.start()
         elif service_choice == self.SUBSCRIPTION_TYPES[1]:
             # Do Sub -- Thread of data straight to it
             client_id = self.newest_client_id
             subscription = (self.SUBSCRIPTION_TYPES[0], c, addr, msg_queue, client_id)
             self.message_subscriptions[client_id] = subscription
-            msg_sub_thread = threading.Thread(target = self._msg_service, args=(client_id))
+            msg_sub_thread = threading.Thread(target = self._msg_service, args=(client_id,))
             self.open_message_threads[client_id] = msg_sub_thread
             msg_sub_thread.start()
         else:
@@ -226,29 +225,46 @@ class PublisherTCP:
     def _check_add_addr_conn(self, c, addr):
         ADDRESS_OKAY = False
         if addr is not None:
-            if addr  != self.addr and self.current_client_count == 0:
-                print("New Connection from ", str(addr))
-                ADDRESS_OKAY = True 
+            check_entries = np.array([c == x[self.ADDRESS_INDX][1] for _, x in self.message_subscriptions.items()], dtype=np.int)
+            entries_already_exist = np.sum(check_entries)
+            print("FOO FOO ", check_entries, entries_already_exist, c, addr)
+            if  not entries_already_exist:
+                print("FOO FOO")
+                if self.current_client_count + 1 <= self.MAX_SUBSCRIPTIONS:
+                    print("FOO FOO")
+                    self.current_client_count += 1
+                    self.newest_client_id += 1
+                    self.client_id_tags[self.newest_client_id] = self.current_client_count
+                    print("New Connection from ", str(addr))
+                    ADDRESS_OKAY = True 
+                else:
+                    print("Too Many Subscribers - Either up MAX_SUBSCRIPTIONS or the new subscriber wont be added")
         return ADDRESS_OKAY
 
     # Messaging Routines
     def _msg_pub(self, client_id):
-    
         while True:
             if not self.message_subscriptions[client_id][self.MSG_QUEUE_INDX].empty():
-                raw_data = self.message_subscriptions[client_id][self.MSG_QUEUE_INDX].get()
+                if self.message_subscriptions[client_id][self.MSG_QUEUE_INDX].full():
+                    self.message_subscriptions[client_id][self.MSG_QUEUE_INDX].get()
                 try:
-                    self.message_subscriptions[client_id][self.CONNECTION_INDX].send(pickle.dumps(raw_data))
+                    # Get Data to send
+                    with lock:
+                        raw_data = self.message_subscriptions[client_id][self.MSG_QUEUE_INDX].get()
+                        print("Sending")
+                        self.message_subscriptions[client_id][self.CONNECTION_INDX].send(pickle.dumps(raw_data))
                 except Exception:
                     print('No Answer from: ', self.client_id_tags[client_id])
                     print('Disconnecting from: ', self.message_subscriptions[client_id]
-                          [self.CONNECTION_INDX], self.message_subscriptions[client_id][self.ADDRESS_INDX])
+                        [self.CONNECTION_INDX], self.message_subscriptions[client_id][self.ADDRESS_INDX])
                     # Cleanup:
-                    self.message_subscriptions[client_id][self.CONNECTION_INDX].send(pickle.dumps(raw_data))
+                    #self.message_subscriptions[client_id][self.CONNECTION_INDX].send(pickle.dumps(raw_data)
                     del self.message_subscriptions[client_id]
-                    del self.open_message_threads[client_id]
+                    #self.open_message_threads[client_id]._delete()
                     del self.client_id_tags[client_id]
-                    self.current_client_count -= 1           
+                    self.current_client_count -= 1
+                    print(self.message_subscriptions,
+                        self.open_message_threads, self.client_id_tags)
 
     def _msg_service(self):
         while True:
@@ -263,29 +279,35 @@ class PublisherTCP:
                     self.addr = None
                     self.current_client_count -= 1    
     def publish(self, msg):
-        for client_id in self.client_id_tags:
-            self.message_subscriptions[client_id][self.MSG_QUEUE_INDX].put(msg)
+        if len(self.message_subscriptions) > 0:
+            print(self.client_id_tags)
+            for client_id in self.client_id_tags: # Grabs Key
+                #print(msg, self.message_subscriptions)
+                # Add thread pool
+                with lock:
+                    self.message_subscriptions[client_id][self.MSG_QUEUE_INDX].put(msg)
 
 
 def test_publisher():
-    XBOX_SAMPLE_PERIOD = .00025
-    LOOP_DELAY = .00025
+    XBOX_SAMPLE_PERIOD = .0025
+    LOOP_DELAY = .0025
     TCP_IP = "127.0.0.1"
-    TCP_PORT = 5005
+    TCP_PORT = 5007
     BUFF_SIZE = 1024
-    QUEUE_SIZE = 10
-    MAX_SUBSCRIBERS = 1
+    QUEUE_SIZE = 100
+    MAX_SUBSCRIBERS = 2
     host = PublisherTCP(host=TCP_IP, port=TCP_PORT,
-                        BUFF_SIZE=BUFF_SIZE, QUEUE_SIZE=QUEUE_SIZE, MAX_SUBS=MAX_SUBSCRIBERS)
+                        BUFF_SIZE=BUFF_SIZE, QUEUE_SIZE=QUEUE_SIZE, 
+                        MAX_SUBSCRIPTIONS=MAX_SUBSCRIBERS)
     #host = TCPHost(host = TCP_IP, port = TCP_PORT,
     #            buff_size = 1024, listen_for = LISTEN_FOR)
-
+    print("Launch Xbox Listener")
     xbl = XboxListenerLinux.XBoxListener(XBOX_SAMPLE_PERIOD)
     xbl.init()
-
+    print("Launched!")
     while True:
         data = xbl.get()
-        print("running..")
+        #print("running..")
         if data is not None:
             #print('controls ', data)
             host.publish(data)
@@ -318,8 +340,8 @@ def test_tcphost():
 
 
 def main():
-    #test_publisher()
-    test_tcphost()
+    test_publisher()
+    #test_tcphost()
         
 
 

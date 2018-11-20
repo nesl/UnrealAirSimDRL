@@ -2,26 +2,19 @@
 
 #!/usr/bin/env python
 
-"""
-A module for getting input from Microsoft XBox 360 controllers via the XInput library on Windows.
-Adapted from Jason R. Coombs' code here:
-http://pydoc.net/Python/jaraco.input/1.0.1/jaraco.input.win32.xinput/
-under the MIT licence terms
-Upgraded to Python 3
-Modified to add deadzones, reduce noise, and support vibration
-Only req is Pyglet 1.2alpha1 or higher:
-pip install --upgrade http://pyglet.googlecode.com/archive/tip.zip 
-"""
 
 #import ctypes
 import os
 import sys
 import time
+import numpy as np
 import multiprocessing
 import threading
 import queue
 import serial
 
+serial_port = '/dev/ttyACM0'
+baud_rate = 57600  # 115200
 
 class IMUQ:
     def __init__(self, buff_size = 10):
@@ -51,20 +44,28 @@ def calibrate(N):
     sum_quatw = 0
     sum_quatx = 0
     sum_quaty = 0
-    sum_quatz =0                       
-    with serial.Serial('COM9', 115200) as ser:
-        ser.write(b'r')
-        ser.write(b'r')
-        ser.write(b'r')
-        ser.write(b'r')
-        ser.write(b'r')
-        
-        for i in range(15):
-            ser.readline()
-            print("Throw out!")
-        time.sleep(.05)
-        line = ser.readline()
+    sum_quatz =0
+    with serial.Serial(serial_port, baud_rate) as ser:  # or 115200 maybe 57600
+    #with serial.Serial('COM9', 115200) as ser: -> Windows Version
+        print('Turning off continous streaming')
+        ser.write(b'#o0')
+        print(ser.readline())
+        print('Attempting to turn up the baud rate')
+        #ser.write(b'r')
+        print(ser.readline())
+        #ser.write(b'r')
+        print(ser.readline())
+        #ser.write(b'r')
+        print(ser.readline())
+        print('Turning on continous streaming')
+        ser.write(b'#o1')
+        for i in range(50): # Flush
+            print("Flushing..")
+            print(ser.readline())
+            time.sleep(.02)
+        print("Done Flush")
         for i in range(calibrate_trial):
+            print("Calibrating ", i, "/ ", calibrate_trial)
             line= ser.readline()
             calib_data = [float(x) for x in str(line.decode('utf-8')).split(',')]
             sum_quatw += calib_data[7]
@@ -79,8 +80,6 @@ def calibrate(N):
                   sum_pitch/(N*1.0), sum_roll/(N*1.0), sum_yaw/(N*1.0)]
         return offset
 
-
-
 # Globals
 keys = ["TimeMS","accelX","accelY", "accelZ","gyroX", "gyroY", "gyroZ", 
         "quatW", "quatX", "quatY", "quatZ","pitch", "roll", "yaw","time"]
@@ -92,9 +91,10 @@ imuq = IMUQ()
 def sample_imu(dt,offset):
     start = time.time()
     #for Linux
-    #with serial.Serial('/dev/ttyACM0', 115200) as ser:
-    #print("WE ARE HERE!")
-    with serial.Serial('COM9', 115200) as ser:
+    print("We did it..")
+    time.sleep(1)
+    with serial.Serial(serial_port, baud_rate) as ser:
+    #with serial.Serial('COM9', 115200) as ser:
         line = ser.readline()
         while True:
             now = time.time() - start
@@ -110,14 +110,92 @@ def sample_imu(dt,offset):
             imuq.put(imuInput)
             time.sleep(dt)
 
-    
+
 class IMUListener(threading.Thread):
-    def __init__(self, sample_rate):
+    def __init__(self, sample_rate, dev_port = "/dev/ttyACM0", baud_rate = 57600, time_out = 1.2):
         threading.Thread.__init__(self)
         #self.run = sample_first_joystick
         self.sample_rate = sample_rate
         self.time_start = time.time()
-        
+        self.dev_port = dev_port 
+        self.baud_rate = baud_rate
+        self.time_out = time_out
+        self.serial_port = serial.Serial(
+            self.dev_port, self.baud_rate, timeout=self.time_out)
+    
+    def setup_imu(self, calibration_steps = 40):
+        # 1) Check if we are even getting IMU readings..
+        try:
+            print("IMU is Functional: ", self.serial_port.readline())
+        except:
+            print("We Timed Out...Attempting to Restart the IMU")
+            self.serial_port.write(b' ') # unpauses
+            try:
+                print("IMU is Functional: ", self.serial_port.readline())
+            finally:
+                print("Nothing Works, try reseting from Arduino Serial Monitor..")
+                exit(1)
+        print('Turning off continous streaming')
+        ser.write(b'#o0')
+        print("Adjusting IMU rate to specified sample rate -- rates between 0 - 100 Hz:")
+        bins = np.array([1,10,20,30,40,50,60,70,80,90,100])
+        t0 = time.time()
+        print("Getting sample count over 5 seconds")
+        datas = []
+        while(time.time() - t0 < 5):
+            datas.append(self.serial_port.readline())
+            print("Count is: ", len(datas))
+        sample_rate0 = np.digitize(len(datas) / 5.0, bins)
+        self.sample_rate = np.digitize(self.sample_rate)
+        print("Current Sample Rate is: ", sample_rate0)
+        print("Adjusting by: ", np.abs(self.sample_rate - sample_rate0))
+        if self.sample_rate > sample_rate0:
+            for i in range(int(np.max(self.sample_rate) - np.max(sample_rate0))):
+                self.serial_port.write(b'r')
+                print("Increasing sample time")
+            print("The rate of the IMU is now: ", self.sample_rate)
+        else:
+            for i in range(len(bins) - int(np.max(self.sample_rate) + np.max(sample_rate0))):
+                self.serial_port.write(b'r')
+                print("Increasing sample time")
+            print("The rate of the IMU is now: ", self.sample_rate)
+        time.sleep(1)
+        print("Start calibrating!")
+        sum_pitch = 0
+        sum_roll = 0
+        sum_yaw = 0
+        sum_quatw = 0
+        sum_quatx = 0
+        sum_quaty = 0
+        sum_quatz = 0
+        with serial.Serial(serial_port, baud_rate) as ser:  # or 115200 maybe 57600
+            #with serial.Serial('COM9', 115200) as ser: -> Windows Version
+            print('Turning on continous streaming')
+            self.serial_port.write(b'#o1')
+            for i in range(50):  # Flush
+                print("Flushing..")
+                print(self.serial_port.readline())
+                time.sleep(.02)
+            print("Done Flush")
+            for i in range(calibration_steps):
+                print("Calibrating ", i, "/ ", calibration_steps)
+                line = self.serial_port.readline()
+                calib_data = [float(x) for x in str(line.decode('utf-8')).split(',')]
+                sum_quatw += calib_data[7]
+                sum_quatx += calib_data[8]
+                sum_quaty += calib_data[9]
+                sum_quatz += calib_data[10]
+                sum_pitch += calib_data[11]
+                sum_roll += calib_data[12]
+                sum_yaw += calib_data[13]
+                print(sum_quatw, sum_quatx, sum_quaty)
+            
+            N = calibration_steps
+            offset = [sum_quatw/(N*1.0), sum_quatx/(N*1.0), sum_quaty/(N*1.0), sum_quatz/(N*1.0),
+                    sum_pitch/(N*1.0), sum_roll/(N*1.0), sum_yaw/(N*1.0)]
+            print("Offsets found to be: ", offset)
+            return offset
+
     def init(self):
         self.time_start = time.time()
         self.now = None
@@ -136,9 +214,15 @@ class IMUListener(threading.Thread):
         global imuq
         self.now = time.time() - self.time_start
         return imuq.get()
-        
-#if __name__ == '__main__':
-#    imul = IMUListener(0.02)
-#    imul.init()
-#    # while True:
-#    #     print(imul.get())
+
+
+
+if __name__ == '__main__':
+    sample_rate = .05
+    imul = IMUListener(sample_rate)
+    imul.init()
+    time.sleep(10)
+    print("Go!")
+    while True:
+        print(imul.get())
+        time.sleep(2*sample_rate)

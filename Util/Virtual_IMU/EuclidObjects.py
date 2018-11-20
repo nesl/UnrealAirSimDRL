@@ -234,7 +234,7 @@ class Grid(object):
         drawables.sort(key=lambda s: screen.depth(s.centroid()))
         [ s.draw(screen) for s in drawables ]
         
-        
+'''      
 class PlaceCube(object):
     def __init__(self, 
                  cubeSize = [4,4,4], 
@@ -280,5 +280,5 @@ class PlaceCube(object):
                 break
             if count == 0:
                 break    
-
+'''
 
