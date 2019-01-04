@@ -21,7 +21,7 @@ import time
 from operator import itemgetter, attrgetter
 from itertools import count, starmap
 from pyglet import event
-import xlwt
+#import xlwt
 import multiprocessing
 import threading
 import queue

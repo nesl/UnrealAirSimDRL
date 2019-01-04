@@ -128,6 +128,15 @@ def quaternion_to_rotation_matrix2(quat):
     return rot_mat
 
 
+def rotation_matrix_to_quaternion(rot):
+    x = np.array([0,0,0,0], dtype = np.float)
+    x[0] = np.sqrt(rot[0, 0] + rot[1, 1] + rot[2,2] + 1) / 2.0
+    x[1] = (rot[2, 1] - rot[1, 2]) / (4.0*x[0])
+    x[2] = (rot[0, 2] - rot[2, 0]) / (4.0*x[0])
+    x[3] = (rot[1, 0] - rot[0, 1]) / (4.0*x[0])
+    print(x)
+    return x # the quaternion
+
 
 # returns a quaternion 
 def rotate_vector_by_quaternion(vector, quat):

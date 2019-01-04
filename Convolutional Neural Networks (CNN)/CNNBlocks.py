@@ -48,12 +48,13 @@ class VGGConvPoolBlock64():
             # The pool stride is set as default. 
             self.conv_layers.append(ConvPoolLayer(ks, conv_stride = conv_stride, isBiased = isBiased, conv_mode = conv_mode)) # Here the pool size must match the stride length
         
+        # Print the kernal Sizes after initialization is done
         for i in range(len(self.conv_layers)):
             print("Kernal Sizes: ", self.conv_layers[i].kern.shape) 
         
-    # Returns the convolved, pooled, and potentially relu'd feature map
+    # Returns the convolved, pooled, and potentially relu'd / batch normed feature map
     def forward(self, Z):
-        # Compute and return the convoled, pooled, and relued feature map
+        # Compute and return the convoled, pooled, and relu'd feature map
         for i in range(self.layer_count):
             pool_flag = self.pool_flags[i]
             relu_flag = self.relu_flags[i]
@@ -64,8 +65,12 @@ class VGGConvPoolBlock64():
         return Z
     
     # For Counting operations with your pool
-    def get_layer_output_channel_dim(self, kernal_layer):
-        return self.conv_layers[kernal_layer].kern_size[3]
+    def get_layer_output_channel_dim(self, kernal_layer = None):
+        if kernal_layer is None:
+            return self.conv_layers[-1].kern_size[3] # last layer
+        else:
+            assert kernal_layer <= len(self.conv_layers)
+            return self.conv_layers[kernal_layer].kern_size[3]
     def get_block_conv_stride(self):
         conv_stride_block_settings = self.conv_strides[0]
         return conv_stride_block_settings
@@ -155,14 +160,14 @@ class ResNetBlock64(VGGConvPoolBlock64):
                  _conv_strides = [[1,1,1,1],[1,1,1,1]],
                  _isBiaseds = [True, True],
                  _conv_mode = ['SAME','SAME']):
-        VGGConvPoolBlock64.__init__(pool_flags = _pool_flags, 
+        VGGConvPoolBlock64.__init__(self, pool_flags = _pool_flags, 
                                     relus_flags = _relus_flags,
                                     batch_normalization_flags = _batch_normalization_flags,
                                  kern_sizes = _kern_sizes,
                                  conv_strides = _conv_strides,
                                  isBiaseds = _isBiaseds,
                                  conv_mode = _conv_mode)
-    
+
     def forward(self, Z):
         # Compute and return the convoled, pooled, and relued feature map
         # No Pools should occur before addition -- will reduce the dimentionality
@@ -172,6 +177,11 @@ class ResNetBlock64(VGGConvPoolBlock64):
             relu_flag = self.relu_flags[i]
             # Forwards
             Z = self.conv_layers[i].forward(Z, pool_flag, relu_flag)
+            
+            # If the output dimentions of Z (final) and X (initial) has changed, we change the 'residual' to be add-able to output
+            # this means the new X is the block's first internal feature map
+            if i == 0 and Z.shape[3] != X.shape[3]:
+                X = Z # So that adding the two tensors at the end have the same 4D shape
             # Batch Normalization
             if self.batch_normalization_flags[i]:
                 (mean, var) = tf.nn.moments(Z, axes = 0)
@@ -183,6 +193,7 @@ class ResNetBlock64(VGGConvPoolBlock64):
         return Z
         
         
+        
 
 class ResNetBlock128(ResNetBlock64):
     def __init__(self,  pool_flags = [False, False], relus_flags = [True, False],
@@ -191,7 +202,7 @@ class ResNetBlock128(ResNetBlock64):
                  conv_strides = [[1,1,1,1],[1,1,1,1]],
                  isBiaseds = [True, True],
                  conv_mode = ['SAME','SAME']):
-        ResNetBlock64.__init__( _pool_flags = pool_flags, _relus_flags = relus_flags,
+        ResNetBlock64.__init__(self, _pool_flags = pool_flags, _relus_flags = relus_flags,
                  _batch_normalization_flags = batch_normalization_flags,
                  _kern_sizes = kern_sizes,
                  _conv_strides = conv_strides,
@@ -206,7 +217,7 @@ class ResNetBlock256(ResNetBlock64):
                  conv_strides = [[1,1,1,1],[1,1,1,1]],
                  isBiaseds = [True, True],
                  conv_mode = ['SAME','SAME']):
-        ResNetBlock64.__init__( _pool_flags = pool_flags, _relus_flags = relus_flags,
+        ResNetBlock64.__init__(self,_pool_flags = pool_flags, _relus_flags = relus_flags,
                  _batch_normalization_flags = batch_normalization_flags,
                  _kern_sizes = kern_sizes,
                  _conv_strides = conv_strides,
@@ -223,7 +234,7 @@ class ResNetBlock512(ResNetBlock64):
                  conv_strides = [[1,1,1,1],[1,1,1,1]],
                  isBiaseds = [True, True],
                  conv_mode = ['SAME','SAME']):
-        ResNetBlock64.__init__( _pool_flags = pool_flags, _relus_flags = relus_flags,
+        ResNetBlock64.__init__(self, _pool_flags = pool_flags, _relus_flags = relus_flags,
                  _batch_normalization_flags = batch_normalization_flags,
                  _kern_sizes = kern_sizes,
                  _conv_strides = conv_strides,

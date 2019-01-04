@@ -174,7 +174,7 @@ def callback(msg):
 def test_subscribe():
     try:
         TCP_IP = "127.0.0.1"
-        TCP_PORT = 5007
+        TCP_PORT = 5005
         BUFF_SIZE = 1024
         QUEUE_SIZE = 2
         print("Starting Subscriber")

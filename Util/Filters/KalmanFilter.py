@@ -1516,7 +1516,7 @@ def test_CMU_Mich_Car_Control_LQG_Reference_Tracking():
     dlqg.plot_trajectory()
     foo = 9
 
-def test_filter_py_kalman():
+def test_kalman_filter():
     dt = .05
     # time step
     F = np.matrix([[1, dt, 0, 0],
@@ -1742,18 +1742,39 @@ def test_CMU_Mich_Car_Control_Extended_LQG_Reference_Tracking():
 
 
 
+
+def test_hinf():
+    thetas = -1.0*np.arange(0,100,.2)
+    term = 1.21
+    PI1 = [-1*(.1*(theta + 10.0) + 1.0 - term)/(2.0*(.1*theta + 1.0)*term) + np.sqrt((.1*(theta + 10.0) + 1.0 - term)**2 - 4.0*(term*(theta + 10.0)*.1)) / (2.0*term*(theta + 10.0)) for theta in thetas]
+    PI2 = [-1*(.1*(theta + 10.0) + 1.0 - term)/(2.0*(.1*theta + 1.0)*term) - np.sqrt((.1*(theta + 10.0) + 1.0 -term)**2 - 4.0*(term*(theta + 10.0)*.1)) / (2.0*term*(theta + 10.0)) for theta in thetas]
+    S1 = [(.1*theta + term) / (2.0*(.1*theta + 1.0)) + np.sqrt((.1*theta + term)**2 + 4.0*(.1*theta + 1.0)) / (2.0*(.1*theta + 1.0)) for theta in thetas]
+    S2 = [(.1*theta + term) / (2.0*(.1*theta + 1.0)) - np.sqrt((.1*theta + term)**2 + 4.0*(.1*theta + 1.0)) / (2.0*(.1*theta + 1.0)) for theta in thetas]
+    plt.figure(1)
+    plt.xlim([-100,0])
+    plt.plot(thetas,S1)#,thetas,S2)
+    plt.title("S Ricatti Term")
+    plt.figure(2)
+    plt.xlim([-100, 0])
+    plt.plot(thetas,PI2)#,thetas,PI2)
+    plt.title("PI Riccatti Term")
+    plt.show()
+    print(thetas,S1,S2)
+    foo = 9
+
 # The difference in amplitude for discrete and regular impulse is 10  
 if __name__ == "__main__":
     #test_kalman_ukf()
-    #test_filter_py_kalman()
+    test_kalman_filter()
     #test_lq_stochastic_ctime()
     #test_uncertainty_threshold_principal()
     #test_CMU_Mich_Car_Control()
     #test_CMU_Mich_Car_Control_Reference_Tracking()
     #test_CMU_Mich_Car_Control_LQG_Reference_Tracking()
     #test_filter_py_ekf()
-    test_CMU_Mich_Car_Control_Extended_LQG_Reference_Tracking()
-    foo = 9
+    #test_CMU_Mich_Car_Control_Extended_LQG_Reference_Tracking()
+    #test_hinf()
+    #foo = 9
     
     
     

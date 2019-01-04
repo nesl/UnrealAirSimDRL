@@ -6,7 +6,6 @@ Created on Wed Aug  1 01:47:20 2018
 """
 
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\Util")
 import tensorflow as tf
 
 
@@ -40,4 +39,3 @@ class FullyConnectedLayer():
                 return tf.matmul(Z,self.W)
             else:
                 return self.activation_fun(tf.matmul(Z,self.W))
-   

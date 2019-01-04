@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-
 #!/usr/bin/env python
-
 
 #import ctypes
 import os
@@ -88,7 +86,7 @@ lock = threading.Lock()
 imuq = IMUQ()
 
 
-def sample_imu(dt,offset):
+def sample_imu(hertz_frq, offset):
     start = time.time()
     #for Linux
     print("We did it..")
@@ -108,14 +106,14 @@ def sample_imu(dt,offset):
                         keys[12]:data[12]-offset[5], keys[13]:data[13]-offset[6], keys[14]:fmtFloat(now)}
             #print(imuInput)
             imuq.put(imuInput)
-            time.sleep(dt)
+            time.sleep(1/hertz_frq)
 
 
 class IMUListener(threading.Thread):
-    def __init__(self, sample_rate, dev_port = "/dev/ttyACM0", baud_rate = 57600, time_out = 1.2):
+    def __init__(self, hertz_frq, dev_port = "/dev/ttyACM0", baud_rate = 57600, time_out = 1.2):
         threading.Thread.__init__(self)
         #self.run = sample_first_joystick
-        self.sample_rate = sample_rate
+        self.hertz_frq = hertz_frq
         self.time_start = time.time()
         self.dev_port = dev_port 
         self.baud_rate = baud_rate
@@ -144,22 +142,22 @@ class IMUListener(threading.Thread):
         datas = []
         while(time.time() - t0 < 5):
             datas.append(self.serial_port.readline())
-            print("Count is: ", len(datas))
-        sample_rate0 = np.digitize(len(datas) / 5.0, bins)
-        self.sample_rate = np.digitize(self.sample_rate)
-        print("Current Sample Rate is: ", sample_rate0)
-        print("Adjusting by: ", np.abs(self.sample_rate - sample_rate0))
-        if self.sample_rate > sample_rate0:
-            for i in range(int(np.max(self.sample_rate) - np.max(sample_rate0))):
+            print("Count over", time.time() - t0 ,"is: ", len(datas))
+        hertz_frq0 = np.digitize(len(datas) / 5.0, bins)
+        self.hertz_frq = np.digitize(self.hertz_frq)
+        print("Current Sample Rate is: ", hertz_frq0)
+        print("Adjusting by: ", np.abs(self.hertz_frq - hertz_frq0))
+        if self.hertz_frq > hertz_frq0:
+            for i in range(int(np.max(self.hertz_frq) - np.max(hertz_frq0))):
                 self.serial_port.write(b'r')
                 print("Increasing sample time")
-            print("The rate of the IMU is now: ", self.sample_rate)
+            print("The rate of the IMU is now: ", self.hertz_frq)
         else:
-            for i in range(len(bins) - int(np.max(self.sample_rate) + np.max(sample_rate0))):
+            for i in range(len(bins) - int(np.max(self.hertz_frq) + np.max(hertz_frq0))):
                 self.serial_port.write(b'r')
                 print("Increasing sample time")
-            print("The rate of the IMU is now: ", self.sample_rate)
-        time.sleep(1)
+            print("The rate of the IMU is now: ", self.hertz_frq)
+        time.sleep(3)
         print("Start calibrating!")
         sum_pitch = 0
         sum_roll = 0
@@ -208,7 +206,7 @@ class IMUListener(threading.Thread):
         print("Start Calibrating!")
         offset = calibrate(50)
         print("Calibration is done!")
-        sample_imu(self.sample_rate, offset)
+        sample_imu(self.hertz_frq, offset)
     
     def get(self):
         global imuq
@@ -218,11 +216,11 @@ class IMUListener(threading.Thread):
 
 
 if __name__ == '__main__':
-    sample_rate = .05
+    sample_rate = 40
     imul = IMUListener(sample_rate)
     imul.init()
     time.sleep(10)
     print("Go!")
     while True:
         print(imul.get())
-        time.sleep(2*sample_rate)
+        time.sleep(1/sample_rate)

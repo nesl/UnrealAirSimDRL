@@ -7,19 +7,22 @@ Created on Sun Aug  5 13:54:53 2018
 import os
 import pandas as pd
 import numpy as np
-import WebScraper as WS
+#import WebScraper as WS
 import urllib
 import bs4
 import pickle
 
+# These Are Still Windows 10 formatted
 fer_2013_filepath = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\fer2013\\fer2013.csv"
 CAAD_filepath = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\CAAD\\dev_dataset.csv"
 CAAD_data_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\CAAD\\images\\"
 ImageNet_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\\\DataSets\\imagenet_fall11_urls\\"
-Mnist_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\mnist\\mnist_train.csv"
 Website = "https://www.uwaterloo.ca"
 cifar10_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\cifar10"
 cifar100_dir = os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\DataSets\\cifar100"
+
+# This is good to go
+Mnist_dir = "~/Desktop/DataSets/mnist/mnist_train.csv"
 
 
 # Returns the 36000+ Images of the Fer2013 Facial Recognition Dataset (10 Classes of facial expressions)
@@ -68,25 +71,32 @@ def get_cifar100(filepath = cifar100_dir, data_set = 1):
     y = np.reshape(y,(len(y),1))
     return (X, y)
 
-def get_mnist(filepath = Mnist_dir, train_size = 55000, norm = False):
+def get_mnist(filepath = Mnist_dir, train_size = 55000, norm = False, reshape_to_img = True):
     data = pd.read_csv(filepath, sep = ' ', header = None)
     data = data.values
     datums = [data[i][0] for i in range(len(data))]
     datums_segs = [datums[i].split(',') for i in range(len(data))]
-    labels = np.array([datums_segs[i][0] for i in range(len(data))])
-    imgs = np.array([datums_segs[i][1:] for i in range(len(data))], dtype = np.float)
-    
+    labels = np.array([datums_segs[i][0] for i in range(1,len(data))], dtype = np.int)
+    imgs = np.array([datums_segs[i][1:] for i in range(1,len(data))], dtype = np.float)
     if imgs.shape[0] == labels.shape[0]:
         # Images are returns as NxHxW
         # Mnist Pixels are 28 by 28
-        imgs = imgs.reshape(-1,28,28,1) # reshape
-        # Return the training set, and the test set as (X_train, y_train, X_test, y_test)
-        if norm:
-            imgs /= 255 # Normalize pixel values
-            return [imgs[0:train_size,:,:,:],labels[0:train_size], imgs[train_size:,:,:,:],labels[train_size:]]
-        else:
-            return [imgs[0:train_size,:,:,:],labels[0:train_size], imgs[train_size:,:,:,:],labels[train_size:]]
+        if reshape_to_img:
+            imgs = imgs.reshape(-1,28,28,1) # reshape
+            # Return the training set, and the test set as (X_train, y_train, X_test, y_test)
+            if norm:
+                imgs /= 255.0 # Normalize pixel values
+                return [imgs[0:train_size,:,:,:],labels[0:train_size], imgs[train_size:,:,:,:],labels[train_size:]]
+            else:
+                return [imgs[0:train_size,:,:,:],labels[0:train_size], imgs[train_size:,:,:,:],labels[train_size:]]
+        else: # Keep as vector
+            if norm:
+                imgs /= 255.0  # Normalize pixel values
+                return [imgs[0:train_size, :], labels[0:train_size], imgs[train_size:, :], labels[train_size:]]
+            else:
+                return [imgs[0:train_size, :], labels[0:train_size], imgs[train_size:, :], labels[train_size:]]
     else:
+        print("Something is wrong!")
         return (-1, -1)
     
 # Returns all the web data to the image folder

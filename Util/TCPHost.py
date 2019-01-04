@@ -290,8 +290,9 @@ class PublisherTCP:
 
 def test_publisher():
     XBOX_SAMPLE_PERIOD = .0025
-    LOOP_DELAY = .0025
-    TCP_IP = "127.0.0.1"
+    LOOP_DELAY = .025
+    #TCP_IP = "127.0.0.1"
+    TCP_IP = "192.168.1.212"
     TCP_PORT = 5007
     BUFF_SIZE = 1024
     QUEUE_SIZE = 100
@@ -317,9 +318,10 @@ def test_publisher():
 def test_tcphost():
     # Initialize TCP Host
     XBOX_SAMPLE_PERIOD = .00025
-    LOOP_DELAY = .25
+    LOOP_DELAY = .05
     TCP_IP = "127.0.0.1"
     TCP_PORT = 5005
+    print(TCP_PORT)
     BUFF_SIZE = 10
     MAX_SUBSCRIBERS = 2
     host = TCPHost(host = TCP_IP, port = TCP_PORT, 

@@ -1,15 +1,20 @@
+#!/usr/bin/env python
+
 import tensorflow as tf
 from sklearn.preprocessing import LabelBinarizer
 import matplotlib.pyplot as plt
 import numpy as np
 import sys, os
-#os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\Neural_Network")
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\Util")
+
+os.environ['CUDA_VISIBLE_DEVICES'] = '0' # Get TF To use the GPU
+
+sys.path.append("/home/natsubuntu/Desktop/UnrealAirSimDRL/Neural_Network")
+sys.path.append("/home/natsubuntu/Desktop/UnrealAirSimDRL/Util")
 import CNNBlocks
 from FullyConnectedLayer import FullyConnectedLayer
 import ExcelLoader as XL
-import copy 
+import copy
+import math
 
 
 # CNN with ConvPool and FC layers ajustable
@@ -21,9 +26,8 @@ class CNN():
     # Number of conv layers is how many convolutional operations you want to run
     # Number fully connected layers is how many FC layers youd like the CNN to include
     # Kernal sizes for each convolutional layer
-
     def __init__(self, input_dims, output_dim,
-                 hl_sizes, isClassification = True):
+                 fc_hl_sizes, isClassification = True, ):
         
         self.isClassification = isClassification
         self.output_dim = output_dim
@@ -43,18 +47,32 @@ class CNN():
         # Holds the individual layer's pool size and pool stride settings
         self.pool_stride_block_settings = {'Num_Pools': [], 'Conv_Stride': [] ,'Pool_Stride': []}
         
-        # Stack Convolutional Blocks
-        ConvBlock = CNNBlocks.VGGConvPoolBlock128()
+        # OPTION 1:
+        # Stack Convolutional Blocks -- VGG
+        #ConvBlock = CNNBlocks.VGGConvPoolBlock64()
+        #self.CNN_Block_Layers.append(ConvBlock)
+        #ConvBlock = CNNBlocks.VGGConvPoolBlock64()
+        #self.CNN_Block_Layers.append(ConvBlock)
+        #ConvBlock = CNNBlocks.VGGConvPoolBlock128()
+        #self.CNN_Block_Layers.append(ConvBlock)
+        #ConvBlock = CNNBlocks.VGGConvPoolBlock256()
+        #self.CNN_Block_Layers.append(ConvBlock)
+        #ConvBlock = CNNBlocks.VGGConvPoolBlock512()
+        #self.CNN_Block_Layers.append(ConvBlock)
+        #ConvBlock = CNNBlocks.VGGConvPoolBlock512()
+        #self.CNN_Block_Layers.append(ConvBlock)
+
+        # OPTION 2: 
+        # Stack Convolutional Blocks -- ResNet
+        ConvBlock = CNNBlocks.VGGConvPoolBlock64()
+        self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.ResNetBlock128()
+        self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.ResNetBlock128()
+        self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.ResNetBlock128()
         self.CNN_Block_Layers.append(ConvBlock)
         ConvBlock = CNNBlocks.VGGConvPoolBlock128()
-        self.CNN_Block_Layers.append(ConvBlock)
-        ConvBlock = CNNBlocks.VGGConvPoolBlock256()
-        self.CNN_Block_Layers.append(ConvBlock)
-        ConvBlock = CNNBlocks.VGGConvPoolBlock256()
-        self.CNN_Block_Layers.append(ConvBlock)
-        ConvBlock = CNNBlocks.VGGConvPoolBlock512()
-        self.CNN_Block_Layers.append(ConvBlock)
-        ConvBlock = CNNBlocks.VGGConvPoolBlock512()
         self.CNN_Block_Layers.append(ConvBlock)
         
         # Determine Number of Stacked Convolutional Blocks
@@ -63,21 +81,26 @@ class CNN():
         idim = self.input_dims[2]
         for i in range(self.num_conv_blocks):
             # Change the input of a block layer to have the same input channel dimention as the inputted image / feature map channel
-            self.CNN_Block_Layers[i].set_layer_input_channel_dim(0,idim) # Layer zero or 1
-            idim = self.CNN_Block_Layers[i].get_layer_ouput_channel_dim(1) # Layer Zero or Layer 1 ( we choose layer one to connect to the next block)
+            self.CNN_Block_Layers[i].set_layer_input_channel_dim(idim) #(0,idim) # Layer zero or 1
+            idim = self.CNN_Block_Layers[i].get_layer_output_channel_dim() # Layer Zero or Layer 1 ( we choose layer one to connect to the next block)
             
+            self.pool_stride_block_settings['Num_Pools'].append(self.CNN_Block_Layers[i].get_num_pools())
+            self.pool_stride_block_settings['Pool_Stride'].append(self.CNN_Block_Layers[i].get_block_pool_stride())
+
             # Store Pool Stride information
-            self.pool_stride_block_settings['Num_Pools'].append(ConvBlock.get_num_pools())
-            self.pool_stride_block_settings['Pool_Stride'].append(ConvBlock.get_block_pool_stride())
+            #self.pool_stride_block_settings['Num_Pools'].append(ConvBlock.get_num_pools())
+            #self.pool_stride_block_settings['Pool_Stride'].append(ConvBlock.get_block_pool_stride())
            
         # Get input size for the fully connected layer
         FC_INPUT_SIZE = int(self.get_FC_input_size(input_dims,
                                                self.pool_stride_block_settings['Num_Pools'],
                                                self.pool_stride_block_settings['Pool_Stride']))
         idim = FC_INPUT_SIZE
-        for i in range(len(hl_sizes)):
-            self.FC_Layers.append(FullyConnectedLayer(idim, hl_sizes[i]))
-            idim = hl_sizes[i]
+        # Report FC Size for Conv - NN transition
+        print("Fully Connected Input Size: ", idim)
+        for i in range(len(fc_hl_sizes)):
+            self.FC_Layers.append(FullyConnectedLayer(idim, fc_hl_sizes[i]))
+            idim = fc_hl_sizes[i]
         self.FC_Layers.append(FullyConnectedLayer(idim, self.output_dim, activation_fun = None))
         
         # Rollout the network tensor abstraction
@@ -89,26 +112,27 @@ class CNN():
         # Reshape Z for the Fully Connected Rollout
         Z = tf.reshape(Z,(-1,FC_INPUT_SIZE))
         # Fully Conneccted Rollout
-        for i in range(len(hl_sizes)):
+        for i in range(len(fc_hl_sizes)):
             Z = self.FC_Layers[i].forward(Z)
         
         self.Y_pred = self.FC_Layers[-1].forward(Z)
         
         # Here we either take the linear output unit, or we use the CNN for classification
-        # If the classifcation flas is set to true, we use a softmax cross entropy with logits cost function
+        # If the classifcation flag is set to true, we use a softmax cross entropy with logits cost function
         if self.isClassification:
             self.Yk = tf.nn.softmax(self.Y_pred, axis = 1)
             self.cost = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits_v2(labels = self.Y, logits = self.Y_pred, dim = 1))
-            #self.optimizer = tf.train.AdamOptimizer(.001).minimize(self.cost)
-            self.optimizer = tf.train.AdagradDAOptimizer(.001).minimize(self.cost)
+            self.optimizer = tf.train.AdamOptimizer(.001).minimize(self.cost)
+            #self.optimizer = tf.train.AdagradDAOptimizer(.001).minimize(self.cost)
         else: # Is Regressive
             self.cost = tf.reduce_sum(tf.squared_difference(self.Y_pred, self.Y))
             self.optimizer = tf.train.AdamOptimizer(.001).minimize(self.cost)
         
+
         # Start the session
         self.set_session(tf.Session())
         self.sess.run(tf.global_variables_initializer())
-        print("Session Initialized Automatically: Network Params will be dumped to CNN_Parameters.txt")
+        print("Session Initialized: Network Params will be dumped to CNN_Parameters.txt")
         
     # We need to assume that our convolutions are 
     def get_FC_input_size(self, img_height_width, num_pools, Pool_Strides):
@@ -120,14 +144,18 @@ class CNN():
         for i in range(self.num_conv_blocks):
             # Reduce dimentionaility per the pool instructions
             if num_pools[i] != 0:
-                img_sizes[0] /= (Pool_Strides[i][1] * num_pools[i])
-                img_sizes[1] /= (Pool_Strides[i][2] * num_pools[i])
-        
+                if img_sizes[0] % (Pool_Strides[i][1] * num_pools[i]) != 0 or img_sizes[1] % (Pool_Strides[i][2] * num_pools[i]) != 0:
+                    img_sizes[0] /= (Pool_Strides[i][1] * num_pools[i])
+                    img_sizes[1] /= (Pool_Strides[i][2] * num_pools[i])
+                    img_sizes[0] = math.ceil(img_sizes[0])
+                    img_sizes[1] = math.ceil(img_sizes[1])
+                else:
+                    img_sizes[0] /= (Pool_Strides[i][1] * num_pools[i])
+                    img_sizes[1] /= (Pool_Strides[i][2] * num_pools[i]) 
         return img_sizes[0] * img_sizes[1] * self.CNN_Block_Layers[-1].get_block_out_dim()
     
     def set_session(self, session):
         self.sess = session
-        
     
     # Pass in the full data chunk to train on
     def train(self, X,Y, mini_batch_chunk = 2000, mini_batch_sz = 64, 
@@ -172,7 +200,7 @@ class CNN():
                 return [percent_correct, Y_op]
     
     def save_tensor_weight(self, 
-                           directory = "D:\\Desktop\\Research\\Machine_Learning\\Anaconda\\Spyder\\Reinforcement_Learning_Master\\Convolutional Neural Networks (CNN)",
+                           directory = "/home/natsubuntu/Desktop",
                            step = 100,
                            optional_string = ""):
         saver = tf.train.Saver()
@@ -180,13 +208,6 @@ class CNN():
     
     def close(self):
         self.sess.run(tf.global_variables_initializer())
-
-
-
-
-
-
-
 
 
 
@@ -204,13 +225,13 @@ def test_mnist():
     # Reshape the Y data
     lb = LabelBinarizer()
     Y_train = lb.fit_transform(y_train)
-    Y_test = lb.fit_transform(y_test)
+    Y_test = lb.transform(y_test)
     #plt.imshow(X[1], cmap = 'gray')
     
     # I/O Network Parameters
     idim = (IM_WIDTH, IM_HEIGHT, IM_CHANNELS)
     odim = 10
-    hl_sizes = [3000,1000] # Fully Connected layers. Conv Layers are setup in the object initializer
+    hl_sizes = [1600,800,400] # Fully Connected layers. Conv Layers are setup in the object initializer
     
     # Initialize model
     model = CNN(idim, odim, hl_sizes)
@@ -239,7 +260,9 @@ def test_mnist():
     plt.show()
 
 
-    
+if __name__ == "__main__":
+    test_mnist()
+
     
     
     
