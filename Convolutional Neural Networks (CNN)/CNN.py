@@ -27,7 +27,7 @@ class CNN():
     # Number fully connected layers is how many FC layers youd like the CNN to include
     # Kernal sizes for each convolutional layer
     def __init__(self, input_dims, output_dim,
-                 fc_hl_sizes, isClassification = True, ):
+                 fc_hl_sizes, isClassification = True, use_resnet = True ):
         
         self.isClassification = isClassification
         self.output_dim = output_dim
@@ -49,31 +49,32 @@ class CNN():
         
         # OPTION 1:
         # Stack Convolutional Blocks -- VGG
-        #ConvBlock = CNNBlocks.VGGConvPoolBlock64()
-        #self.CNN_Block_Layers.append(ConvBlock)
-        #ConvBlock = CNNBlocks.VGGConvPoolBlock64()
-        #self.CNN_Block_Layers.append(ConvBlock)
-        #ConvBlock = CNNBlocks.VGGConvPoolBlock128()
-        #self.CNN_Block_Layers.append(ConvBlock)
-        #ConvBlock = CNNBlocks.VGGConvPoolBlock256()
-        #self.CNN_Block_Layers.append(ConvBlock)
-        #ConvBlock = CNNBlocks.VGGConvPoolBlock512()
-        #self.CNN_Block_Layers.append(ConvBlock)
-        #ConvBlock = CNNBlocks.VGGConvPoolBlock512()
-        #self.CNN_Block_Layers.append(ConvBlock)
-
-        # OPTION 2: 
-        # Stack Convolutional Blocks -- ResNet
-        ConvBlock = CNNBlocks.VGGConvPoolBlock64()
-        self.CNN_Block_Layers.append(ConvBlock)
-        ConvBlock = CNNBlocks.ResNetBlock128()
-        self.CNN_Block_Layers.append(ConvBlock)
-        ConvBlock = CNNBlocks.ResNetBlock128()
-        self.CNN_Block_Layers.append(ConvBlock)
-        ConvBlock = CNNBlocks.ResNetBlock128()
-        self.CNN_Block_Layers.append(ConvBlock)
-        ConvBlock = CNNBlocks.VGGConvPoolBlock128()
-        self.CNN_Block_Layers.append(ConvBlock)
+        if not use_resnet:
+            ConvBlock = CNNBlocks.VGGConvPoolBlock64()
+            self.CNN_Block_Layers.append(ConvBlock)
+            ConvBlock = CNNBlocks.VGGConvPoolBlock64()
+            self.CNN_Block_Layers.append(ConvBlock)
+            ConvBlock = CNNBlocks.VGGConvPoolBlock128()
+            self.CNN_Block_Layers.append(ConvBlock)
+            ConvBlock = CNNBlocks.VGGConvPoolBlock256()
+            self.CNN_Block_Layers.append(ConvBlock)
+            ConvBlock = CNNBlocks.VGGConvPoolBlock512()
+            self.CNN_Block_Layers.append(ConvBlock)
+            ConvBlock = CNNBlocks.VGGConvPoolBlock512()
+            self.CNN_Block_Layers.append(ConvBlock)
+        else:
+            # OPTION 2: 
+            # Stack Convolutional Blocks -- ResNet
+            ConvBlock = CNNBlocks.VGGConvPoolBlock64()
+            self.CNN_Block_Layers.append(ConvBlock)
+            ConvBlock = CNNBlocks.ResNetBlock128()
+            self.CNN_Block_Layers.append(ConvBlock)
+            ConvBlock = CNNBlocks.ResNetBlock128()
+            self.CNN_Block_Layers.append(ConvBlock)
+            ConvBlock = CNNBlocks.ResNetBlock128()
+            self.CNN_Block_Layers.append(ConvBlock)
+            ConvBlock = CNNBlocks.VGGConvPoolBlock128()
+            self.CNN_Block_Layers.append(ConvBlock)
         
         # Determine Number of Stacked Convolutional Blocks
         self.num_conv_blocks = len(self.CNN_Block_Layers)

@@ -10,8 +10,7 @@ import tensorflow as tf
 
 
 # Fully Connected hidden layer
-class FullyConnectedLayer():
-
+class FullyConnectedLayer:
     def __init__(self, inp_sz, op_sz, bias = True, activation_fun = tf.tanh):
         
         # Tensor Sizes, Bias, and activation function

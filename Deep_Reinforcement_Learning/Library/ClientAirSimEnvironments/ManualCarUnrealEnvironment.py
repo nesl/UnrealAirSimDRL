@@ -309,7 +309,7 @@ class ManualCarUnrealEnvironment:
         self.time_to_step = 0
         self.extra_metadata = None
 
-# Car actions are through manual input, either xbox controller or keyboard listener
+    # Car actions are through manual input, either xbox controller or keyboard listener
     def step(self, action):
         tic = time.time()
         # 1. Take action in the simulator based on the agents action choice

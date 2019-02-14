@@ -9,12 +9,14 @@ Created on Fri Aug  3 15:00:44 2018
 import tensorflow as tf
 import numpy as np
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Neural_Network")
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "\\..\\..\\Convolutional Neural Networks (CNN)")
+sys.path.append("/home/natsubuntu/Desktop/UnrealAirSimDRL/Neural_Network")
+sys.path.append("/home/natsubuntu/Desktop/UnrealAirSimDRL/Convolutional Neural Networks (CNN)")
 import FullyConnectedLayer as FCL
 import CNNBlocks
+import gym
 import time as time
 import os
+import skimage
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
@@ -50,13 +52,13 @@ class CDQN():
         self.CNN_params = [] # Storage of FC Param Variables for tensor copies
         
         # Stack Convolutional Blocks -- Most of VGG Model
-        ConvBlock = CNNBlocks.VGGConvPoolBlock32()
-        self.CNN_Block_Layers.append(ConvBlock)
-        ConvBlock = CNNBlocks.VGGConvPoolBlock32()
-        self.CNN_Block_Layers.append(ConvBlock)
         ConvBlock = CNNBlocks.VGGConvPoolBlock64()
         self.CNN_Block_Layers.append(ConvBlock)
         ConvBlock = CNNBlocks.VGGConvPoolBlock64()
+        self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.VGGConvPoolBlock128()
+        self.CNN_Block_Layers.append(ConvBlock)
+        ConvBlock = CNNBlocks.VGGConvPoolBlock128()
         self.CNN_Block_Layers.append(ConvBlock)
         ConvBlock = CNNBlocks.VGGConvPoolBlock128()
         self.CNN_Block_Layers.append(ConvBlock)
@@ -270,14 +272,6 @@ class CDQN():
                 img_sizes[1] /= (Pool_Strides[i][2] * num_pools[i])
         
         return img_sizes[0] * img_sizes[1] * self.CNN_Block_Layers[-1].get_block_out_dim()
-        
-
-class CRDQN():
-    def __init__():
-        pass # Add
-    
-
-
 
 def get_tf_variable_size():
     total_parameters = 0
@@ -293,6 +287,10 @@ def get_tf_variable_size():
         #print(variable_parameters)
         total_parameters += variable_parameters
     print(total_parameters)
+
+
+
+
 
 
 

@@ -82,7 +82,6 @@ class VGGConvPoolBlock64():
     def get_num_pools(self):
         return np.sum(np.array(self.pool_flags, dtype = np.int))
 
-
 class VGGConvPoolBlock32(VGGConvPoolBlock64):
     
     def __init__(self, _pool_flags = [False, True], _relus_flags = [False, True],
@@ -98,7 +97,6 @@ class VGGConvPoolBlock32(VGGConvPoolBlock64):
                                        conv_strides = _conv_strides,
                                        isBiaseds = _isBiaseds,
                                        conv_mode = _conv_mode) # The returned feature map will be of the same size as the inputted feature map
-
 
 class VGGConvPoolBlock128(VGGConvPoolBlock64):
     
@@ -116,7 +114,6 @@ class VGGConvPoolBlock128(VGGConvPoolBlock64):
                                        isBiaseds = _isBiaseds,
                                        conv_mode = _conv_mode) # The returned feature map will be of the same size as the inputted feature map
   
-
 class VGGConvPoolBlock256(VGGConvPoolBlock64):
     
     def __init__(self, _pool_flags = [False, False ,True], _relus_flags = [False, False, True],
@@ -133,7 +130,6 @@ class VGGConvPoolBlock256(VGGConvPoolBlock64):
                                        isBiaseds = _isBiaseds,
                                        conv_mode = _conv_mode) # The returned feature map will be of the same size as the inputted feature map
 
-
 class VGGConvPoolBlock512(VGGConvPoolBlock64):
     
     def __init__(self, _pool_flags = [False, False ,True], _relus_flags = [False, False, True],
@@ -149,9 +145,6 @@ class VGGConvPoolBlock512(VGGConvPoolBlock64):
                                        conv_strides = _conv_strides,
                                        isBiaseds = _isBiaseds,
                                        conv_mode = _conv_mode) # The returned feature map will be of the same size as the inputted feature map
-
-
-
 
 class ResNetBlock64(VGGConvPoolBlock64):
     def __init__(self, _pool_flags = [False, False], _relus_flags = [True, False],
@@ -192,9 +185,6 @@ class ResNetBlock64(VGGConvPoolBlock64):
         Z = tf.nn.relu(Z)
         return Z
         
-        
-        
-
 class ResNetBlock128(ResNetBlock64):
     def __init__(self,  pool_flags = [False, False], relus_flags = [True, False],
                  batch_normalization_flags = [True, True],
@@ -209,7 +199,6 @@ class ResNetBlock128(ResNetBlock64):
                  _isBiaseds = isBiaseds,
                  _conv_mode = conv_mode)
 
-
 class ResNetBlock256(ResNetBlock64):
     def __init__(self, pool_flags = [False, False], relus_flags = [True, False],
                  batch_normalization_flags = [True, True],
@@ -223,9 +212,6 @@ class ResNetBlock256(ResNetBlock64):
                  _conv_strides = conv_strides,
                  _isBiaseds = isBiaseds,
                  _conv_mode = conv_mode)
-
-
-
 
 class ResNetBlock512(ResNetBlock64):
     def __init__(self, pool_flags = [False, False], relus_flags = [True, False],
